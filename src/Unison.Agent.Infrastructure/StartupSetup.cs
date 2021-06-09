@@ -9,7 +9,6 @@ using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Infrastructure.Amqp;
 using Unison.Agent.Infrastructure.Data;
 using Unison.Agent.Infrastructure.Data.Repositories;
-using Unison.Agent.Infrastructure.Data.Services;
 
 namespace Unison.Agent.Infrastructure
 {
@@ -17,7 +16,7 @@ namespace Unison.Agent.Infrastructure
     {
         public static void AddDbContext(this IServiceCollection services)
         {
-            services.AddScoped<IDbContext, DbContext>();
+            services.AddSingleton<IDbContext, DbContext>();
             services.AddScoped<ISQLRepository, SQLRepository>();
 
             //services.AddSingleton<DbContext>();
@@ -31,6 +30,8 @@ namespace Unison.Agent.Infrastructure
         {
             services.AddSingleton<IAmqpChannelFactory, AmqpChannelFactory>();
             services.AddSingleton<IAmqpSubscriberFactory, AmqpSubscriberFactory>();
+
+            services.AddScoped<IAmqpInfrastructureInitializer, AmqpInfrastructureInitializer>();
             services.AddScoped<IAmqpPublisher, AmqpPublisher>();
 
             services.AddScoped<ITestDependency, TestDependency>();

@@ -15,18 +15,22 @@ namespace Unison.Agent.Core.Services
     public class SubscriberManager : IHostedService
     {
         private readonly IConfiguration _config;
+        private readonly IServiceProvider _services;
         private readonly IEnumerable<IAmqpSubscriber> _subscribers;
         private readonly ILogger<SubscriberManager> _logger;
 
-        public SubscriberManager(IAmqpSubscriberFactory subscriberFactory, IConfiguration config, ILogger<SubscriberManager> logger)
+        public SubscriberManager(IAmqpSubscriberFactory subscriberFactory, IServiceProvider services, IConfiguration config, ILogger<SubscriberManager> logger)
         {
             _config = config;
             _logger = logger;
+            _services = services;
             _subscribers = subscriberFactory.CreateSubscribers();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            InitializeAmqpInfrastructure();
+
             foreach (var subscriber in _subscribers)
             {
                subscriber.Subscribe();
@@ -45,5 +49,13 @@ namespace Unison.Agent.Core.Services
             return Task.CompletedTask;
         }
 
+        private void InitializeAmqpInfrastructure()
+        {
+            using (var scope = _services.CreateScope())
+            {
+                var amqpInfrastructureInitializer = scope.ServiceProvider.GetRequiredService<IAmqpInfrastructureInitializer>();
+                amqpInfrastructureInitializer.Initialize();
+            }
+        }
     }
 }

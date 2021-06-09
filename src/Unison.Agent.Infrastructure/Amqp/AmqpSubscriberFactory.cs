@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
+using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
 
 namespace Unison.Agent.Infrastructure.Amqp
@@ -16,17 +17,17 @@ namespace Unison.Agent.Infrastructure.Amqp
         // TODO: Read the queues from the config files
         private const string queue = "demo-queue";
 
-        private readonly IConfiguration _config;
+        private readonly IAgentConfiguration _agentConfig;
         private readonly IServiceProvider _services;
         private readonly IAmqpChannelFactory _channelFactory;
         private readonly ILoggerFactory _loggerFactory;
 
-        public AmqpSubscriberFactory(IAmqpChannelFactory channelFactory, ILoggerFactory loggerFactory, IServiceProvider services, IConfiguration config)
+        public AmqpSubscriberFactory(IAmqpChannelFactory channelFactory, ILoggerFactory loggerFactory, IServiceProvider services, IAgentConfiguration agentConfig)
         {
             _services = services;
             _channelFactory = channelFactory;
             _loggerFactory = loggerFactory;
-            _config = config;
+            _agentConfig = agentConfig;
         }
 
         public IEnumerable<IAmqpSubscriber> CreateSubscribers()
