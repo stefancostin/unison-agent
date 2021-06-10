@@ -15,55 +15,34 @@ namespace Unison.Agent.Infrastructure.Amqp
         private readonly IAgentConfiguration _agentConfig;
         private readonly IAmqpConfiguration _amqpConfig;
         private readonly IAmqpChannelFactory _channelFactory;
+        private readonly Dictionary<string, string> _consumerExchangeQueueMap;
 
         public AmqpInfrastructureInitializer(IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpChannelFactory channelFactory)
         {
             _agentConfig = agentConfig;
             _amqpConfig = amqpConfig;
             _channelFactory = channelFactory;
+            _consumerExchangeQueueMap = new Dictionary<string, string>();
         }
 
-        public void Initialize()
+        public Dictionary<string, string> Initialize()
         {
             using (var channel = _channelFactory.CreateUnmanagedChannel())
             {
-                foreach (var exchange in _amqpConfig.Exchanges.Subscribe)
-                {
-
-                    if (exchange.Type.ToLower() == AmqpTopics.Fanout)
-                        InitFanoutExchangeInfrastructure(channel, exchange);
-
-                    else if (exchange.Type.ToLower() == AmqpTopics.Topic)
-                        InitTopicExchangeInfrastructure(channel, exchange);
-                }
+                BindToCommandsExchange(channel);
+                BindToConnectionsExchange(channel);
             }
+            return _consumerExchangeQueueMap;
         }
 
-        private void InitFanoutExchangeInfrastructure(IModel channel, AmqpSubscribeExchange subscribeExchange)
+
+        private void BindToCommandsExchange(IModel channel)
         {
             var agentId = _agentConfig.Id;
-            var exchange = subscribeExchange.Name;
+            var exchange = _amqpConfig.Exchanges.Commands;
+            var commands = new List<string>() { "sync" };
 
-            var queue = $"{exchange}.{agentId}";
-
-            channel.QueueDeclare(queue: queue,
-                                 durable: true,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
-
-            channel.QueueBind(queue: queue,
-                 exchange: exchange,
-                 routingKey: "",
-                 arguments: null);
-        }
-
-        private void InitTopicExchangeInfrastructure(IModel channel, AmqpSubscribeExchange subscribeExchange)
-        {
-            var agentId = _agentConfig.Id;
-            var exchange = subscribeExchange.Name;
-
-            foreach (string command in subscribeExchange.Commands)
+            foreach (string command in commands)
             {
                 var queue = $"{exchange}.{command}.{agentId}";
 
@@ -86,7 +65,30 @@ namespace Unison.Agent.Infrastructure.Amqp
                      exchange: exchange,
                      routingKey: genericRoutingKey,
                      arguments: null);
+
+                _consumerExchangeQueueMap.Add(AmqpExchanges.Commands, queue);
             }
+        }
+
+        private void BindToConnectionsExchange(IModel channel)
+        {
+            var agentId = _agentConfig.Id;
+            var exchange = _amqpConfig.Exchanges.Connections;
+
+            var queue = $"{exchange}.{agentId}";
+
+            channel.QueueDeclare(queue: queue,
+                                 durable: true,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
+
+            channel.QueueBind(queue: queue,
+                 exchange: exchange,
+                 routingKey: "",
+                 arguments: null);
+
+            _consumerExchangeQueueMap.Add(AmqpExchanges.Connections, queue);
         }
     }
 }

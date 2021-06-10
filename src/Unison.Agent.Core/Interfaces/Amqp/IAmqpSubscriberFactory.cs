@@ -8,6 +8,6 @@ namespace Unison.Agent.Core.Interfaces.Amqp
 {
     public interface IAmqpSubscriberFactory
     {
-        IEnumerable<IAmqpSubscriber> CreateSubscribers();
+        IEnumerable<IAmqpSubscriber> CreateSubscribers(Dictionary<string, string> exchangeQueueMap);
     }
 }

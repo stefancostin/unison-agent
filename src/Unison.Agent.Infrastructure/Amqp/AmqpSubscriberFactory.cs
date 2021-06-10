@@ -14,36 +14,47 @@ namespace Unison.Agent.Infrastructure.Amqp
 {
     public class AmqpSubscriberFactory : IAmqpSubscriberFactory
     {
-        // TODO: Read the queues from the config files
-        private const string queue = "demo-queue";
-
-        private readonly IAgentConfiguration _agentConfig;
         private readonly IServiceProvider _services;
         private readonly IAmqpChannelFactory _channelFactory;
         private readonly ILoggerFactory _loggerFactory;
 
-        public AmqpSubscriberFactory(IAmqpChannelFactory channelFactory, ILoggerFactory loggerFactory, IServiceProvider services, IAgentConfiguration agentConfig)
+        public AmqpSubscriberFactory(IAmqpChannelFactory channelFactory, ILoggerFactory loggerFactory, IServiceProvider services)
         {
             _services = services;
             _channelFactory = channelFactory;
             _loggerFactory = loggerFactory;
-            _agentConfig = agentConfig;
         }
 
-        public IEnumerable<IAmqpSubscriber> CreateSubscribers()
+        public IEnumerable<IAmqpSubscriber> CreateSubscribers(Dictionary<string, string> consumerExchangeQueueMap)
         {
             using (var scope = _services.CreateScope())
             {
-                var syncWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker>();
-
-                var connectionsSubscriber = CreateSubscriber(queue, syncWorker);
+                //var connectionsSubscriber = CreateConnectionsSubscriber(scope, exchangeQueueMap);
+                var syncSubscriber = CreateSyncSubscriber(scope, consumerExchangeQueueMap);
 
                 var subscribers = new List<IAmqpSubscriber>();
-                subscribers.Add(connectionsSubscriber);
+                //subscribers.Add(connectionsSubscriber);
+                subscribers.Add(syncSubscriber);
 
                 return subscribers;
             }
         }
+
+        private IAmqpSubscriber CreateConnectionsSubscriber(IServiceScope scope, Dictionary<string, string> consumerExchangeQueueMap)
+        {
+            // TODO: Need to differentiate between the two classes of ISubscriptionWorker
+            var connectionsWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker>();
+            var queue = consumerExchangeQueueMap[AmqpExchanges.Connections];
+            return CreateSubscriber(queue, connectionsWorker);
+        }
+
+        private IAmqpSubscriber CreateSyncSubscriber(IServiceScope scope, Dictionary<string, string> consumerExchangeQueueMap)
+        {
+            var syncWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker>();
+            var queue = consumerExchangeQueueMap[AmqpExchanges.Commands];
+            return CreateSubscriber(queue, syncWorker);
+        }
+
 
         private IAmqpSubscriber CreateSubscriber(string queue, ISubscriptionWorker worker)
         {

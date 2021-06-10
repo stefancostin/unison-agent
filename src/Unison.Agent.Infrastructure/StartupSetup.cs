@@ -29,9 +29,9 @@ namespace Unison.Agent.Infrastructure
         public static void AddAmqpContext(this IServiceCollection services)
         {
             services.AddSingleton<IAmqpChannelFactory, AmqpChannelFactory>();
-            services.AddSingleton<IAmqpSubscriberFactory, AmqpSubscriberFactory>();
 
             services.AddScoped<IAmqpInfrastructureInitializer, AmqpInfrastructureInitializer>();
+            services.AddScoped<IAmqpSubscriberFactory, AmqpSubscriberFactory>();
             services.AddScoped<IAmqpPublisher, AmqpPublisher>();
 
             services.AddScoped<ITestDependency, TestDependency>();

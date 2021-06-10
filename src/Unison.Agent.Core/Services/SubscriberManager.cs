@@ -9,22 +9,22 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
+using Unison.Agent.Core.Interfaces.Configuration;
 
 namespace Unison.Agent.Core.Services
 {
     public class SubscriberManager : IHostedService
     {
-        private readonly IConfiguration _config;
+        private readonly IAmqpConfiguration _amqpConfig;
         private readonly IServiceProvider _services;
-        private readonly IEnumerable<IAmqpSubscriber> _subscribers;
         private readonly ILogger<SubscriberManager> _logger;
+        private IEnumerable<IAmqpSubscriber> _subscribers;
 
-        public SubscriberManager(IAmqpSubscriberFactory subscriberFactory, IServiceProvider services, IConfiguration config, ILogger<SubscriberManager> logger)
+        public SubscriberManager(IServiceProvider services, IAmqpConfiguration amqpConfig, ILogger<SubscriberManager> logger)
         {
-            _config = config;
+            _amqpConfig = amqpConfig;
             _logger = logger;
             _services = services;
-            _subscribers = subscriberFactory.CreateSubscribers();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -54,7 +54,10 @@ namespace Unison.Agent.Core.Services
             using (var scope = _services.CreateScope())
             {
                 var amqpInfrastructureInitializer = scope.ServiceProvider.GetRequiredService<IAmqpInfrastructureInitializer>();
-                amqpInfrastructureInitializer.Initialize();
+                var exchangeQueueMap = amqpInfrastructureInitializer.Initialize();
+
+                var subscriberFactory = scope.ServiceProvider.GetRequiredService<IAmqpSubscriberFactory>();
+                _subscribers = subscriberFactory.CreateSubscribers(exchangeQueueMap);
             }
         }
     }
