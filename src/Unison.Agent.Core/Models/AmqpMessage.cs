@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Unison.Agent.Core.Interfaces.Amqp
+namespace Unison.Agent.Core.Models
 {
-    public interface ITestDependency
+    public class AmqpMessage
     {
-        public void Test();
+        public string Query { get; set; }
     }
 }

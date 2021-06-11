@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
@@ -8,8 +9,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Workers;
+using Unison.Agent.Core.Models;
 
-namespace Unison.Agent.Infrastructure.Amqp
+namespace Unison.Agent.Infrastructure.Amqp.Client
 {
     public class AmqpSubscriber : IAmqpSubscriber
     {
@@ -33,9 +35,9 @@ namespace Unison.Agent.Infrastructure.Amqp
             consumer.Received += (sender, e) =>
             {
                 var body = e.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                _logger.LogInformation(message);
-                _worker.ProcessRequest(message);
+                var message = JsonConvert.DeserializeObject<AmqpMessage>(Encoding.UTF8.GetString(body));
+                _logger.LogInformation(message.Query);
+                _worker.ProcessRequest(message.Query);
             };
 
             _channel.GetChannel().BasicConsume(queue: _queue, autoAck: true, consumer: consumer);

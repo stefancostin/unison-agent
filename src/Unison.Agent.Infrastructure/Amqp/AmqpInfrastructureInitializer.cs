@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Models;
+using Unison.Agent.Infrastructure.Amqp.Models;
 
 namespace Unison.Agent.Infrastructure.Amqp
 {
@@ -34,7 +35,6 @@ namespace Unison.Agent.Infrastructure.Amqp
             }
             return _consumerExchangeQueueMap;
         }
-
 
         private void BindToCommandsExchange(IModel channel)
         {
@@ -66,7 +66,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                      routingKey: genericRoutingKey,
                      arguments: null);
 
-                _consumerExchangeQueueMap.Add(AmqpExchanges.Commands, queue);
+                _consumerExchangeQueueMap.Add(AmqpExchangeNames.Commands, queue);
             }
         }
 
@@ -88,7 +88,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                  routingKey: "",
                  arguments: null);
 
-            _consumerExchangeQueueMap.Add(AmqpExchanges.Connections, queue);
+            _consumerExchangeQueueMap.Add(AmqpExchangeNames.Connections, queue);
         }
     }
 }

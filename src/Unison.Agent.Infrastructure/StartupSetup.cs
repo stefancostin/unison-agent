@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Infrastructure.Amqp;
+using Unison.Agent.Infrastructure.Amqp.Client;
+using Unison.Agent.Infrastructure.Amqp.Factories;
 using Unison.Agent.Infrastructure.Data;
 using Unison.Agent.Infrastructure.Data.Repositories;
 
@@ -33,8 +35,6 @@ namespace Unison.Agent.Infrastructure
             services.AddScoped<IAmqpInfrastructureInitializer, AmqpInfrastructureInitializer>();
             services.AddScoped<IAmqpSubscriberFactory, AmqpSubscriberFactory>();
             services.AddScoped<IAmqpPublisher, AmqpPublisher>();
-
-            services.AddScoped<ITestDependency, TestDependency>();
         }
     }
 }

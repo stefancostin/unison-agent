@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Unison.Agent.Core.Interfaces.Amqp
 {
     /// <summary>
-    /// Subscribes to an exchange by its own RabbitMQ channel.
+    /// Subscribes to an exchange using its own RabbitMQ channel.
     /// </summary>
     public interface IAmqpSubscriber
     {

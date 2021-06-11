@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
+using Unison.Agent.Infrastructure.Amqp.Client;
+using Unison.Agent.Infrastructure.Amqp.Models;
 
-namespace Unison.Agent.Infrastructure.Amqp
+namespace Unison.Agent.Infrastructure.Amqp.Factories
 {
     public class AmqpSubscriberFactory : IAmqpSubscriberFactory
     {
@@ -44,14 +46,14 @@ namespace Unison.Agent.Infrastructure.Amqp
         {
             // TODO: Need to differentiate between the two classes of ISubscriptionWorker
             var connectionsWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker>();
-            var queue = consumerExchangeQueueMap[AmqpExchanges.Connections];
+            var queue = consumerExchangeQueueMap[AmqpExchangeNames.Connections];
             return CreateSubscriber(queue, connectionsWorker);
         }
 
         private IAmqpSubscriber CreateSyncSubscriber(IServiceScope scope, Dictionary<string, string> consumerExchangeQueueMap)
         {
             var syncWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker>();
-            var queue = consumerExchangeQueueMap[AmqpExchanges.Commands];
+            var queue = consumerExchangeQueueMap[AmqpExchangeNames.Commands];
             return CreateSubscriber(queue, syncWorker);
         }
 

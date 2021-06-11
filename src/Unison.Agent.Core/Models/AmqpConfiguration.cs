@@ -27,23 +27,4 @@ namespace Unison.Agent.Core.Models
         public string Heartbeat { get; set; }
         public string Response { get; set; }
     }
-
-    //public class AmqpExchanges
-    //{
-    //    public AmqpPublishExchanges Publish { get; set; }
-    //    public IEnumerable<AmqpSubscribeExchange> Subscribe { get; set; }
-    //}
-
-    //public class AmqpPublishExchanges
-    //{
-    //    public string Heartbeat { get; set; }
-    //    public string Response { get; set; }
-    //}
-
-    //public class AmqpSubscribeExchange
-    //{
-    //    public string Name { get; set; }
-    //    public string Type { get; set; }
-    //    public IEnumerable<string> Commands { get; set; }
-    //}
 }

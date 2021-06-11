@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Unison.Agent.Infrastructure.Amqp
+namespace Unison.Agent.Infrastructure.Amqp.Models
 {
     public class AmqpManagedChannel : IAmqpManagedChannel
     {

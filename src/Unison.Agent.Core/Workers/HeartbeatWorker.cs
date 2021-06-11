@@ -18,7 +18,7 @@ namespace Unison.Agent.Core.Services.Workers
         private readonly ISQLRepository _repository;
         private readonly ILogger<HeartbeatWorker> _logger;
 
-        public HeartbeatWorker(IAmqpPublisher publisher, ITestDependency test, ISQLRepository repository, ILogger<HeartbeatWorker> logger)
+        public HeartbeatWorker(IAmqpPublisher publisher, ISQLRepository repository, ILogger<HeartbeatWorker> logger)
         {
             _publisher = publisher;
             _repository = repository;
@@ -31,9 +31,6 @@ namespace Unison.Agent.Core.Services.Workers
             //_amqpClient.Publish("Hello from the other side");
 
             _repository.Execute("SELECT * FROM Products");
-
-            // TODO: Remove this and the TimedServiceState model
-            //((TimedServiceState)state).Dispose();
         }
     }
 }

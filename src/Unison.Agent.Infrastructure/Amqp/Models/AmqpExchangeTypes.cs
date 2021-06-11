@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Unison.Agent.Infrastructure.Amqp
+namespace Unison.Agent.Infrastructure.Amqp.Models
 {
-    static class AmqpTopics
+    public static class AmqpExchangeTypes
     {
         public static string Direct { get { return "direct";  } }
         public static string Fanout { get { return "fanout"; } }
