@@ -4,10 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Configuration;
-using Unison.Agent.Core.Models;
-using Unison.Agent.Infrastructure.Amqp.Models;
+using Unison.Common.Amqp.Constants;
+using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Infrastructure.Amqp
 {
@@ -16,24 +15,23 @@ namespace Unison.Agent.Infrastructure.Amqp
         private readonly IAgentConfiguration _agentConfig;
         private readonly IAmqpConfiguration _amqpConfig;
         private readonly IAmqpChannelFactory _channelFactory;
-        private readonly Dictionary<string, string> _consumerExchangeQueueMap;
+        private readonly IAmqpInitializationState _initializationState;
 
-        public AmqpInfrastructureInitializer(IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpChannelFactory channelFactory)
+        public AmqpInfrastructureInitializer(IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpChannelFactory channelFactory, IAmqpInitializationState initializationState)
         {
             _agentConfig = agentConfig;
             _amqpConfig = amqpConfig;
             _channelFactory = channelFactory;
-            _consumerExchangeQueueMap = new Dictionary<string, string>();
+            _initializationState = initializationState;
         }
 
-        public Dictionary<string, string> Initialize()
+        public void Initialize()
         {
             using (var channel = _channelFactory.CreateUnmanagedChannel())
             {
                 BindToCommandsExchange(channel);
                 BindToConnectionsExchange(channel);
             }
-            return _consumerExchangeQueueMap;
         }
 
         private void BindToCommandsExchange(IModel channel)
@@ -66,7 +64,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                      routingKey: genericRoutingKey,
                      arguments: null);
 
-                _consumerExchangeQueueMap.Add(AmqpExchangeNames.Commands, queue);
+                _initializationState.ConsumerExchangeQueueMap.Add(AmqpExchangeNames.Commands, queue);
             }
         }
 
@@ -88,7 +86,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                  routingKey: "",
                  arguments: null);
 
-            _consumerExchangeQueueMap.Add(AmqpExchangeNames.Connections, queue);
+            _initializationState.ConsumerExchangeQueueMap.Add(AmqpExchangeNames.Connections, queue);
         }
     }
 }

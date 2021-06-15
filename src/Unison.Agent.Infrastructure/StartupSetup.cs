@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Infrastructure.Amqp;
-using Unison.Agent.Infrastructure.Amqp.Client;
-using Unison.Agent.Infrastructure.Amqp.Factories;
 using Unison.Agent.Infrastructure.Data;
 using Unison.Agent.Infrastructure.Data.Repositories;
+using Unison.Common.Amqp;
+using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Infrastructure
 {
@@ -30,11 +29,10 @@ namespace Unison.Agent.Infrastructure
 
         public static void AddAmqpContext(this IServiceCollection services)
         {
-            services.AddSingleton<IAmqpChannelFactory, AmqpChannelFactory>();
+            services.AddAmqpInfrastructure();
 
             services.AddScoped<IAmqpInfrastructureInitializer, AmqpInfrastructureInitializer>();
-            services.AddScoped<IAmqpSubscriberFactory, AmqpSubscriberFactory>();
-            services.AddScoped<IAmqpPublisher, AmqpPublisher>();
+            services.AddScoped<IAmqpSubscriberInitializer, AmqpSubscriberInitializer>();
         }
     }
 }

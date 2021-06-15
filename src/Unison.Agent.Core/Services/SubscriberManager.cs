@@ -8,21 +8,19 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Configuration;
+using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Core.Services
 {
     public class SubscriberManager : IHostedService
     {
-        private readonly IAmqpConfiguration _amqpConfig;
         private readonly IServiceProvider _services;
         private readonly ILogger<SubscriberManager> _logger;
         private IEnumerable<IAmqpSubscriber> _subscribers;
 
-        public SubscriberManager(IServiceProvider services, IAmqpConfiguration amqpConfig, ILogger<SubscriberManager> logger)
+        public SubscriberManager(IServiceProvider services, ILogger<SubscriberManager> logger)
         {
-            _amqpConfig = amqpConfig;
             _logger = logger;
             _services = services;
         }
@@ -54,10 +52,10 @@ namespace Unison.Agent.Core.Services
             using (var scope = _services.CreateScope())
             {
                 var amqpInfrastructureInitializer = scope.ServiceProvider.GetRequiredService<IAmqpInfrastructureInitializer>();
-                var exchangeQueueMap = amqpInfrastructureInitializer.Initialize();
+                amqpInfrastructureInitializer.Initialize();
 
-                var subscriberFactory = scope.ServiceProvider.GetRequiredService<IAmqpSubscriberFactory>();
-                _subscribers = subscriberFactory.CreateSubscribers(exchangeQueueMap);
+                var subscriberInitializer = scope.ServiceProvider.GetRequiredService<IAmqpSubscriberInitializer>();
+                _subscribers = subscriberInitializer.Initialize();
             }
         }
     }

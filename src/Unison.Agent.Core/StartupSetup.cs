@@ -10,6 +10,7 @@ using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Agent.Core.Models;
 using Unison.Agent.Core.Services;
 using Unison.Agent.Core.Services.Workers;
+using Unison.Common.Amqp.DTO;
 
 namespace Unison.Agent.Infrastructure
 {
@@ -27,7 +28,7 @@ namespace Unison.Agent.Infrastructure
         public static void AddCoreServices(this IServiceCollection services)
         {
             services.AddScoped<ITimedWorker, HeartbeatWorker>();
-            services.AddScoped<ISubscriptionWorker, SyncWorker>();
+            services.AddScoped<ISubscriptionWorker<AmqpMessage>, SyncWorker>();
 
             services.AddHostedService<SubscriberManager>();
             //services.AddHostedService<TimedServiceManager>();

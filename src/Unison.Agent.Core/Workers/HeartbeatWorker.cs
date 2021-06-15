@@ -4,11 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces;
-using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Core.Interfaces.Workers;
-using Unison.Agent.Core.Models;
+using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Core.Services.Workers
 {

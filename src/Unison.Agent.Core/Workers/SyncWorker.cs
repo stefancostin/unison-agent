@@ -4,15 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces;
-using Unison.Agent.Core.Interfaces.Amqp;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Core.Interfaces.Workers;
-using Unison.Agent.Core.Models;
+using Unison.Common.Amqp.DTO;
+using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Core.Services.Workers
 {
-    public class SyncWorker : ISubscriptionWorker
+    public class SyncWorker : ISubscriptionWorker<AmqpMessage>
     {
         private readonly IAmqpPublisher _amqpPublisher;
         private readonly ISQLRepository _repository;
@@ -25,16 +24,17 @@ namespace Unison.Agent.Core.Services.Workers
             _logger = logger;
 
         }
-        public void ProcessRequest(string message)
+
+        public void ProcessMessage(AmqpMessage message)
         {
             Console.WriteLine("This has reached the SyncWorker");
-            var result = _repository.Execute(message);
+            var result = _repository.Execute(message.Query);
 
             var r = result.FirstOrDefault();
-            _logger.LogInformation($"{r["Id"].ToString()}, {r["Name"].ToString()}, {r["Price"].ToString()}");
+            _logger.LogInformation($"{r["Id"]}, {r["Name"]}, {r["Price"]}");
 
             var response = new AmqpResponse() { QueryResult = result };
-            _amqpPublisher.Publish(response);
+            _amqpPublisher.PublishResponse(response);
         }
     }
 }
