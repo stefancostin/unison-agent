@@ -9,18 +9,23 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Configuration;
+using Unison.Common.Amqp.DTO;
 using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Core.Services
 {
-    public class SubscriberManager : IHostedService
+    public class AmqpServiceManager : IHostedService
     {
+        private readonly IAgentConfiguration _agentConfig;
+        private readonly IAmqpConfiguration _amqpConfig;
+        private readonly ILogger<AmqpServiceManager> _logger;
         private readonly IServiceProvider _services;
-        private readonly ILogger<SubscriberManager> _logger;
         private IEnumerable<IAmqpSubscriber> _subscribers;
 
-        public SubscriberManager(IServiceProvider services, ILogger<SubscriberManager> logger)
+        public AmqpServiceManager(IServiceProvider services, ILogger<AmqpServiceManager> logger, IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig)
         {
+            _agentConfig = agentConfig;
+            _amqpConfig = amqpConfig;
             _logger = logger;
             _services = services;
         }
@@ -29,17 +34,16 @@ namespace Unison.Agent.Core.Services
         {
             InitializeAmqpInfrastructure();
 
-            foreach (var subscriber in _subscribers)
-            {
-               subscriber.Subscribe();
-            }
+            Parallel.ForEach(_subscribers, subscriber => subscriber.Subscribe());
+
+            SendInitialCconnectionStatus();
 
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            foreach(var subscriber in _subscribers)
+            foreach (var subscriber in _subscribers)
             {
                 subscriber.Unsubscribe();
             }
@@ -56,6 +60,20 @@ namespace Unison.Agent.Core.Services
 
                 var subscriberInitializer = scope.ServiceProvider.GetRequiredService<IAmqpSubscriberInitializer>();
                 _subscribers = subscriberInitializer.Initialize();
+            }
+        }
+
+        private void SendInitialCconnectionStatus()
+        {
+            using (var scope = _services.CreateScope())
+            {
+                var amqpPublisher = scope.ServiceProvider.GetRequiredService<IAmqpPublisher>();
+                var exchange = _amqpConfig.Exchanges.Connections;
+                var message = new AmqpConnected()
+                {
+                    Agent = new AmqpAgent() { AgentId = _agentConfig.Id }
+                };
+                amqpPublisher.PublishMessage(message, exchange);
             }
         }
     }

@@ -8,7 +8,7 @@ using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Common.Amqp.Interfaces;
 
-namespace Unison.Agent.Core.Services.Workers
+namespace Unison.Agent.Core.Workers
 {
     public class HeartbeatWorker : ITimedWorker
     {

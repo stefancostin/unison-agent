@@ -9,9 +9,9 @@ using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Common.Amqp.DTO;
 using Unison.Common.Amqp.Interfaces;
 
-namespace Unison.Agent.Core.Services.Workers
+namespace Unison.Agent.Core.Workers
 {
-    public class SyncWorker : ISubscriptionWorker<AmqpMessage>
+    public class SyncWorker : ISubscriptionWorker<AmqpSyncRequest>
     {
         private readonly IAmqpPublisher _amqpPublisher;
         private readonly ISQLRepository _repository;
@@ -25,7 +25,7 @@ namespace Unison.Agent.Core.Services.Workers
 
         }
 
-        public void ProcessMessage(AmqpMessage message)
+        public void ProcessMessage(AmqpSyncRequest message)
         {
             Console.WriteLine("This has reached the SyncWorker");
             var result = _repository.Execute(message.Query);
@@ -33,8 +33,8 @@ namespace Unison.Agent.Core.Services.Workers
             var r = result.FirstOrDefault();
             _logger.LogInformation($"{r["Id"]}, {r["Name"]}, {r["Price"]}");
 
-            var response = new AmqpResponse() { QueryResult = result };
-            _amqpPublisher.PublishResponse(response);
+            var response = new AmqpSyncResponse() { QueryResult = result };
+            _amqpPublisher.PublishResponse(response, "unison.responses");
         }
     }
 }

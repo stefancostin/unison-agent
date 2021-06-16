@@ -1,10 +1,12 @@
 ﻿using RabbitMQ.Client;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Configuration;
+using Unison.Agent.Core.Models;
 using Unison.Common.Amqp.Constants;
 using Unison.Common.Amqp.Interfaces;
 
@@ -15,65 +17,63 @@ namespace Unison.Agent.Infrastructure.Amqp
         private readonly IAgentConfiguration _agentConfig;
         private readonly IAmqpConfiguration _amqpConfig;
         private readonly IAmqpChannelFactory _channelFactory;
-        private readonly IAmqpInitializationState _initializationState;
 
-        public AmqpInfrastructureInitializer(IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpChannelFactory channelFactory, IAmqpInitializationState initializationState)
+        public AmqpInfrastructureInitializer(IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpChannelFactory channelFactory)
         {
             _agentConfig = agentConfig;
             _amqpConfig = amqpConfig;
             _channelFactory = channelFactory;
-            _initializationState = initializationState;
+
+            amqpConfig.Queues = new AmqpQueues();
         }
 
         public void Initialize()
         {
             using (var channel = _channelFactory.CreateUnmanagedChannel())
             {
-                BindToCommandsExchange(channel);
-                BindToConnectionsExchange(channel);
+                BindReconnectQueueToCommandsExchange(channel);
+                BindSyncQueueToCommandsExchange(channel);
             }
         }
 
-        private void BindToCommandsExchange(IModel channel)
+        private void BindReconnectQueueToCommandsExchange(IModel channel)
         {
             var agentId = _agentConfig.Id;
+            var command = _amqpConfig.Commands.Reconnect;
             var exchange = _amqpConfig.Exchanges.Commands;
-            var commands = new List<string>() { "sync" };
 
-            foreach (string command in commands)
-            {
-                var queue = $"{exchange}.{command}.{agentId}";
+            var queue = $"{exchange}.{command}.{agentId}";
 
-                channel.QueueDeclare(queue: queue,
-                                     durable: true,
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
+            channel.QueueDeclare(queue: queue,
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
 
-                var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
 
-                channel.QueueBind(queue: queue,
-                                  exchange: exchange,
-                                  routingKey: agentSpecificRoutingKey,
-                                  arguments: null);
+            channel.QueueBind(queue: queue,
+                              exchange: exchange,
+                              routingKey: agentSpecificRoutingKey,
+                              arguments: null);
 
-                var genericRoutingKey = $"{exchange}.{command}";
+            var genericRoutingKey = $"{exchange}.{command}";
 
-                channel.QueueBind(queue: queue,
-                     exchange: exchange,
-                     routingKey: genericRoutingKey,
-                     arguments: null);
+            channel.QueueBind(queue: queue,
+                 exchange: exchange,
+                 routingKey: genericRoutingKey,
+                 arguments: null);
 
-                _initializationState.ConsumerExchangeQueueMap.Add(AmqpExchangeNames.Commands, queue);
-            }
+            _amqpConfig.Queues.CommandReconnect = queue;
         }
 
-        private void BindToConnectionsExchange(IModel channel)
+        private void BindSyncQueueToCommandsExchange(IModel channel)
         {
             var agentId = _agentConfig.Id;
-            var exchange = _amqpConfig.Exchanges.Connections;
+            var command = _amqpConfig.Commands.Sync;
+            var exchange = _amqpConfig.Exchanges.Commands;
 
-            var queue = $"{exchange}.{agentId}";
+            var queue = $"{exchange}.{command}.{agentId}";
 
             channel.QueueDeclare(queue: queue,
                                  durable: true,
@@ -81,12 +81,22 @@ namespace Unison.Agent.Infrastructure.Amqp
                                  autoDelete: false,
                                  arguments: null);
 
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+
+            channel.QueueBind(queue: queue,
+                              exchange: exchange,
+                              routingKey: agentSpecificRoutingKey,
+                              arguments: null);
+
+            var genericRoutingKey = $"{exchange}.{command}";
+
             channel.QueueBind(queue: queue,
                  exchange: exchange,
-                 routingKey: "",
+                 routingKey: genericRoutingKey,
                  arguments: null);
 
-            _initializationState.ConsumerExchangeQueueMap.Add(AmqpExchangeNames.Connections, queue);
+            _amqpConfig.Queues.CommandSync = queue;
         }
+
     }
 }
