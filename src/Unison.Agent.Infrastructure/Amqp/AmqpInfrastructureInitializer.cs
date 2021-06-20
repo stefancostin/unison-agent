@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Models;
-using Unison.Common.Amqp.Constants;
 using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Infrastructure.Amqp
@@ -31,9 +30,41 @@ namespace Unison.Agent.Infrastructure.Amqp
         {
             using (var channel = _channelFactory.CreateUnmanagedChannel())
             {
+                BindCacheQueueToCommandsExchange(channel);
                 BindReconnectQueueToCommandsExchange(channel);
                 BindSyncQueueToCommandsExchange(channel);
             }
+        }
+
+        private void BindCacheQueueToCommandsExchange(IModel channel)
+        {
+            var agentId = _agentConfig.Id;
+            var command = _amqpConfig.Commands.Cache;
+            var exchange = _amqpConfig.Exchanges.Commands;
+
+            var queue = $"{exchange}.{command}.{agentId}";
+
+            channel.QueueDeclare(queue: queue,
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
+
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+
+            channel.QueueBind(queue: queue,
+                              exchange: exchange,
+                              routingKey: agentSpecificRoutingKey,
+                              arguments: null);
+
+            var genericRoutingKey = $"{exchange}.{command}";
+
+            channel.QueueBind(queue: queue,
+                 exchange: exchange,
+                 routingKey: genericRoutingKey,
+                 arguments: null);
+
+            _amqpConfig.Queues.CommandCache = queue;
         }
 
         private void BindReconnectQueueToCommandsExchange(IModel channel)

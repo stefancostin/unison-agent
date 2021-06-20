@@ -8,7 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Data;
-using Unison.Agent.Infrastructure.Data.Services;
+using Unison.Agent.Core.Models;
+using Unison.Agent.Infrastructure.Data.Adapters;
 
 namespace Unison.Agent.Infrastructure.Data.Repositories
 {
@@ -23,7 +24,7 @@ namespace Unison.Agent.Infrastructure.Data.Repositories
             _logger = logger;
         }
 
-        public List<Dictionary<string, object>> Execute(string sql)
+        public List<Dictionary<string, object>> Read(QuerySchema schema)
         {
             List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
 
@@ -32,8 +33,8 @@ namespace Unison.Agent.Infrastructure.Data.Repositories
             {
                 connection.Open();
 
-                using var command = connection.CreateCommand();
-                command.CommandText = sql;
+                var commandAdapter = new DbCommandAdapter(connection);
+                using var command = commandAdapter.ConvertToDbCommand(schema);
 
                 using var reader = command.ExecuteReader();
                 var readerAdapter = new DbDataReaderAdapter(reader);

@@ -5,9 +5,8 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces.Data;
 
-namespace Unison.Agent.Infrastructure.Data.Services
+namespace Unison.Agent.Infrastructure.Data.Adapters
 {
     public class DbDataReaderAdapter
     {
@@ -22,8 +21,9 @@ namespace Unison.Agent.Infrastructure.Data.Services
         public Dictionary<string, object> Read()
         {
             Dictionary<string, object> result = new Dictionary<string, object>();
+            List<string> columns = GetColumns();
 
-            foreach (var column in GetColumns())
+            foreach (var column in columns)
             {
                 result.Add(column, _reader[column]);
             }

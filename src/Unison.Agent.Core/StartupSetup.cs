@@ -27,9 +27,12 @@ namespace Unison.Agent.Infrastructure
 
         public static void AddCoreServices(this IServiceCollection services)
         {
+            services.AddSingleton<AgentCache>();
+
             services.AddScoped<ITimedWorker, HeartbeatWorker>();
+            services.AddScoped<ISubscriptionWorker<AmqpCache>, CacheWorker>();
+            services.AddScoped<ISubscriptionWorker<AmqpReconnect>, ReconnectWorker>();
             services.AddScoped<ISubscriptionWorker<AmqpSyncRequest>, SyncWorker>();
-            services.AddScoped<ISubscriptionWorker<AmqpReconnect>, ConnectionWorker>();
 
             services.AddHostedService<AmqpServiceManager>();
             //services.AddHostedService<TimedServiceManager>();

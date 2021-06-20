@@ -67,13 +67,13 @@ namespace Unison.Agent.Core.Services
         {
             using (var scope = _services.CreateScope())
             {
-                var amqpPublisher = scope.ServiceProvider.GetRequiredService<IAmqpPublisher>();
+                var publisher = scope.ServiceProvider.GetRequiredService<IAmqpPublisher>();
                 var exchange = _amqpConfig.Exchanges.Connections;
                 var message = new AmqpConnected()
                 {
                     Agent = new AmqpAgent() { AgentId = _agentConfig.Id }
                 };
-                amqpPublisher.PublishMessage(message, exchange);
+                publisher.PublishMessage(message, exchange);
             }
         }
     }

@@ -28,23 +28,32 @@ namespace Unison.Agent.Infrastructure.Amqp
         {
             using (var scope = _services.CreateScope())
             {
-                var reconnectionsSubscriber = InitializeReconnectionsSubscriber(scope);
+                var cacheSubscriber = InitializeCacheSubscriber(scope);
+                var reconnectSubscriber = InitializeReconnectSubscriber(scope);
                 var syncSubscriber = InitializeSyncSubscriber(scope);
 
                 var subscribers = new List<IAmqpSubscriber>();
 
-                subscribers.Add(reconnectionsSubscriber);
+                subscribers.Add(cacheSubscriber);
+                subscribers.Add(reconnectSubscriber);
                 subscribers.Add(syncSubscriber);
 
                 return subscribers;
             }
         }
 
-        private IAmqpSubscriber InitializeReconnectionsSubscriber(IServiceScope scope)
+        private IAmqpSubscriber InitializeCacheSubscriber(IServiceScope scope)
         {
-            var reconnectionsWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpReconnect>>();
+            var cacheWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpCache>>();
+            var queue = _amqpConfig.Queues.CommandCache;
+            return _subscriberFactory.CreateSubscriber(queue, cacheWorker);
+        }
+
+        private IAmqpSubscriber InitializeReconnectSubscriber(IServiceScope scope)
+        {
+            var reconnectWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpReconnect>>();
             var queue = _amqpConfig.Queues.CommandReconnect;
-            return _subscriberFactory.CreateSubscriber(queue, reconnectionsWorker);
+            return _subscriberFactory.CreateSubscriber(queue, reconnectWorker);
         }
 
         private IAmqpSubscriber InitializeSyncSubscriber(IServiceScope scope)

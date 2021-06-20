@@ -26,9 +26,8 @@ namespace Unison.Agent.Core.Workers
         public void Start(object state)
         {
             _logger.LogInformation("Hello from Job");
-            //_amqpClient.Publish("Hello from the other side");
 
-            _repository.Execute("SELECT * FROM Products");
+            //_repository.Read("SELECT * FROM Products");
         }
     }
 }
