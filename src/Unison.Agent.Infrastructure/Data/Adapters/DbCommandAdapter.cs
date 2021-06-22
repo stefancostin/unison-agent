@@ -32,21 +32,13 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
             return command;
         }
 
-        private void AddAndSanitizeParams(QuerySchema schema, SqlCommand command)
-        {
-            foreach (var param in schema.Params)
-            {
-                command.Parameters.AddWithValue(CreateParameter(param.Field), param.Value);
-            }
-        }
-
         private DbCommand CreateDbCommand(QuerySchema schema, string sql)
         {
             var command = new SqlCommand(sql, (SqlConnection)Connection);
             command.CommandType = CommandType.Text;
 
             if (schema.Params.Any())
-                AddAndSanitizeParams(schema, command);
+                SanitizeAndAddParams(schema, command);
 
             return command;
         }
@@ -75,20 +67,28 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
 
         private string GenerateWhereStatement(QuerySchema schema)
         {
-            var coonditionCount = schema.Params.Count();
+            var conditionsCount = schema.Params.Count();
             var conditionFields = schema.Params.Select(p => p.Field).ToList();
             var conditionParams = schema.Params.Select(p => CreateParameter(p.Field)).ToList();
 
             var conditions = new StringBuilder($"{Sql.Where} ");
-            for (var i = 0; i < coonditionCount; i++)
+            for (int i = 0; i < conditionsCount; i++)
             {
                 conditions.Append($"{conditionFields[i]} = {conditionParams[i]}");
 
-                if (i != coonditionCount - 1)
+                if (i < conditionsCount - 1)
                     conditions.Append($" {Sql.And} ");
             }
 
             return $"{Sql.Where} {conditions}";
+        }
+
+        private void SanitizeAndAddParams(QuerySchema schema, SqlCommand command)
+        {
+            foreach (var param in schema.Params)
+            {
+                command.Parameters.AddWithValue(CreateParameter(param.Field), param.Value);
+            }
         }
 
         private void SanitizeIdentifiers(QuerySchema schema)

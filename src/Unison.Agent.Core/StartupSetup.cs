@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Agent.Core.Models;
+using Unison.Agent.Core.Models.Store;
 using Unison.Agent.Core.Services;
 using Unison.Agent.Core.Workers;
 using Unison.Common.Amqp.DTO;
@@ -27,7 +28,7 @@ namespace Unison.Agent.Infrastructure
 
         public static void AddCoreServices(this IServiceCollection services)
         {
-            services.AddSingleton<AgentCache>();
+            services.AddSingleton<DataStore>();
 
             services.AddScoped<ITimedWorker, HeartbeatWorker>();
             services.AddScoped<ISubscriptionWorker<AmqpCache>, CacheWorker>();

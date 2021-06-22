@@ -5,9 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Exceptions;
+using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Agent.Core.Models;
+using Unison.Agent.Core.Models.Store;
+using Unison.Agent.Core.Utilities;
 using Unison.Common.Amqp.DTO;
 using Unison.Common.Amqp.Interfaces;
 
@@ -15,14 +18,16 @@ namespace Unison.Agent.Core.Workers
 {
     public class SyncWorker : ISubscriptionWorker<AmqpSyncRequest>
     {
-        private readonly AgentCache _cache;
+        private readonly DataStore _dataStore;
+        private readonly IAgentConfiguration _agentConfig;
         private readonly IAmqpPublisher _publisher;
         private readonly ISQLRepository _repository;
         private readonly ILogger<SyncWorker> _logger;
 
-        public SyncWorker(AgentCache cache, IAmqpPublisher publisher, ISQLRepository repository, ILogger<SyncWorker> logger)
+        public SyncWorker(DataStore dataStore, IAgentConfiguration agentConfig, IAmqpPublisher publisher, ISQLRepository repository, ILogger<SyncWorker> logger)
         {
-            _cache = cache;
+            _dataStore = dataStore;
+            _agentConfig = agentConfig;
             _publisher = publisher;
             _repository = repository;
             _logger = logger;
@@ -33,7 +38,7 @@ namespace Unison.Agent.Core.Workers
             Console.WriteLine("This has reached the SyncWorker");
 
             // Do not start synchronization if we haven't received the cached entities yet
-            if (!_cache.Initialized)
+            if (!_dataStore.Initialized)
                 return;
 
             ValidateMessage(message);
@@ -41,19 +46,22 @@ namespace Unison.Agent.Core.Workers
 
             var differences = new List<Dictionary<string, object>>();
 
-            var cache = _cache.Entities.GetValueOrDefault(schema.Entity)?.Data;
+            var cache = _dataStore.GetEntity(schema.Entity);
             var result = _repository.Read(schema);
 
-            if (cache == null || !cache.Any())
+            if (cache == null || !cache.Records.Any())
             {
                 // map everything from the db to differences
                 // map everything from the db to cache (or do this after commands.apply)
             }    
 
-            var r = result.FirstOrDefault();
-            _logger.LogInformation($"{r["Id"]}, {r["Name"]}, {r["Price"]}");
+            var r = result.Records?.FirstOrDefault().Value;
+            _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
 
-            var response = new AmqpSyncResponse() { QueryResult = result };
+            var response = new AmqpSyncResponse() { 
+                Agent = new AmqpAgent() { AgentId = _agentConfig.Id }, 
+                State = new AmqpSyncState() { Added = result.ToAmqpDataSetModel() } 
+            };
             _publisher.PublishMessage(response, "unison.responses");
         }
 

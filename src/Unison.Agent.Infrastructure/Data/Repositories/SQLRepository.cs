@@ -3,10 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unison.Agent.Core.Data;
 using Unison.Agent.Core.Interfaces.Data;
 using Unison.Agent.Core.Models;
 using Unison.Agent.Infrastructure.Data.Adapters;
@@ -24,9 +24,9 @@ namespace Unison.Agent.Infrastructure.Data.Repositories
             _logger = logger;
         }
 
-        public List<Dictionary<string, object>> Read(QuerySchema schema)
+        public DataSet Read(QuerySchema schema)
         {
-            List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
+            DataSet result = new DataSet(schema.Entity, schema.PrimaryKey);
 
             using var connection = _context.GetConnection();
             try
@@ -38,12 +38,12 @@ namespace Unison.Agent.Infrastructure.Data.Repositories
 
                 using var reader = command.ExecuteReader();
                 var readerAdapter = new DbDataReaderAdapter(reader);
-            
+
                 while (reader.HasRows)
                 {
                     while (reader.Read())
                     {
-                        result.Add(readerAdapter.Read());
+                        result.AddRecord(readerAdapter.Read());
                     }
 
                     reader.NextResult();
@@ -58,6 +58,5 @@ namespace Unison.Agent.Infrastructure.Data.Repositories
                 connection.Close();
             }
         }
-
     }
 }
