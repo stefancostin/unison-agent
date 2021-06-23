@@ -3,7 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Unison.Agent.Core.Data;
+using Unison.Agent.Core.Utilities;
 
 namespace Unison.Agent.Core.Models.Store
 {
@@ -13,8 +16,11 @@ namespace Unison.Agent.Core.Models.Store
     /// </summary>
     public class DataStore
     {
+        private readonly object _padlock;
+
         public DataStore()
         {
+            _padlock = new object();
             Entities = new ConcurrentDictionary<string, StoreDataSet>();
         }
 
@@ -30,6 +36,14 @@ namespace Unison.Agent.Core.Models.Store
         public StoreDataSet GetEntity(string entity)
         {
             return Entities.GetValueOrDefault(entity);
+        }
+
+        public DataSet GetEntitySnapshot(string entity)
+        {
+            lock (_padlock)
+            {
+                return Entities.GetValueOrDefault(entity)?.ToDataSetModel();
+            }
         }
     }
 }

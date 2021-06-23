@@ -28,5 +28,10 @@ namespace Unison.Agent.Core.Data
 
             Records.Add(primaryKey, record);
         }
+
+        public Record GetRecord(string primaryKey)
+        {
+            return Records[primaryKey];
+        }
     }
 }

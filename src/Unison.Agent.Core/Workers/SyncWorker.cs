@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unison.Agent.Core.Data;
 using Unison.Agent.Core.Exceptions;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Data;
@@ -42,37 +43,64 @@ namespace Unison.Agent.Core.Workers
                 return;
 
             ValidateMessage(message);
-            QuerySchema schema = MapAmqpMessageoQuerySchema(message);
+            QuerySchema schema = message.ToQuerySchema();
 
-            var differences = new List<Dictionary<string, object>>();
+            StartSync(schema);
 
-            var cache = _dataStore.GetEntity(schema.Entity);
+            // TODO: Remove this unnecessary read after debugging
             var result = _repository.Read(schema);
-
-            if (cache == null || !cache.Records.Any())
-            {
-                // map everything from the db to differences
-                // map everything from the db to cache (or do this after commands.apply)
-            }    
 
             var r = result.Records?.FirstOrDefault().Value;
             _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
 
-            var response = new AmqpSyncResponse() { 
-                Agent = new AmqpAgent() { AgentId = _agentConfig.Id }, 
-                State = new AmqpSyncState() { Added = result.ToAmqpDataSetModel() } 
+            var response = new AmqpSyncResponse()
+            {
+                Agent = new AmqpAgent() { AgentId = _agentConfig.Id },
+                State = new AmqpSyncState() { Added = result.ToAmqpDataSetModel() }
             };
             _publisher.PublishMessage(response, "unison.responses");
         }
 
-        private QuerySchema MapAmqpMessageoQuerySchema(AmqpSyncRequest message)
+        private AmqpSyncState StartSync(QuerySchema schema)
         {
-            return new QuerySchema()
+            var syncState = new AmqpSyncState();
+            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+
+            DataSet cloudEntity = _dataStore.GetEntitySnapshot(schema.Entity);
+            DataSet dbEntity = _repository.Read(schema);
+
+            if (cloudEntity == null || !cloudEntity.Records.Any())
             {
-                Entity = message.Entity,
-                Fields = message.Fields,
-                PrimaryKey = message.PrimaryKey
-            };
+                syncState.Added = dbEntity.ToAmqpDataSetModel();
+                return syncState;
+            }
+
+            foreach (KeyValuePair<string, Record> record in dbEntity.Records)
+            {
+                // Add the new database record in case it doesn't exist in the cloud cache
+                if (!cloudEntity.Records.ContainsKey(record.Key) && record.Value != null)
+                {
+                    syncState.Added.Records.Add(record.Key, record.Value.ToAmqpRecordModel());
+                }
+                // Check for updated fields in case the records have the same primary keys
+                else if (cloudEntity.Records.ContainsKey(record.Key))
+                {
+                    if (!cloudEntity.GetRecord(record.Key).Equals(dbEntity.GetRecord(record.Key)))
+                    {
+                        syncState.Updated.Records.Add(record.Key, record.Value.ToAmqpRecordModel());
+                    }
+                }
+
+                // Since remove is an O(1) operation it's useful to optimize the search for deleted records
+                cloudEntity.Records.Remove(record.Key);
+            }
+
+            // The remaining records existed in the cloud but they have been deleted from the local database
+            syncState.Deleted = cloudEntity.ToAmqpDataSetModel();
+
+            return syncState;
         }
 
         private void ValidateMessage(AmqpSyncRequest message)

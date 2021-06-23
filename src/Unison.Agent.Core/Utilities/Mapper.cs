@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unison.Agent.Core.Data;
+using Unison.Agent.Core.Models;
 using Unison.Agent.Core.Models.Store;
 using Unison.Common.Amqp.DTO;
 
@@ -12,8 +13,7 @@ namespace Unison.Agent.Core.Utilities
 {
     public static class Mapper
     {
-        #region Fields
-
+        #region Data.Fields
         public static AmqpField ToAmqpFieldModel(this Field field)
         {
             if (field == null)
@@ -61,11 +61,9 @@ namespace Unison.Agent.Core.Utilities
 
             return new AmqpField(name: storeField.Name, type: storeField.Type, value: storeField.Value);
         }
-
         #endregion
 
-        #region Records
-
+        #region Data.Records
         public static AmqpRecord ToAmqpRecordModel(this Record record)
         {
             if (record == null)
@@ -112,10 +110,23 @@ namespace Unison.Agent.Core.Utilities
             return storeRecord;
         }
 
+        public static Record ToRecordModel(this StoreRecord storeRecord)
+        {
+            if (storeRecord == null)
+                return null;
+
+            Record record = new Record();
+
+            if (storeRecord.Fields == null)
+                return record;
+
+            record.Fields = storeRecord.Fields.ToDictionary(f => f.Key, f => f.Value?.ToFieldModel());
+
+            return record;
+        }
         #endregion
 
-        #region Data Sets
-
+        #region Data.DataSets
         public static AmqpDataSet ToAmqpDataSetModel(this DataSet dataSet)
         {
             if (dataSet == null)
@@ -162,6 +173,32 @@ namespace Unison.Agent.Core.Utilities
             return storeDataSet;
         }
 
+        public static DataSet ToDataSetModel(this StoreDataSet storeDataSet)
+        {
+            if (storeDataSet == null)
+                return null;
+
+            DataSet dataSet = new DataSet(entity: storeDataSet.Entity, primaryKey: storeDataSet.PrimaryKey);
+
+            if (storeDataSet.Records == null)
+                return dataSet;
+
+            dataSet.Records = storeDataSet.Records.ToDictionary(r => r.Key, r => r.Value?.ToRecordModel());
+
+            return dataSet;
+        }
+        #endregion
+
+        #region Amqp.Messages
+        public static QuerySchema ToQuerySchema(this AmqpSyncRequest message)
+        {
+            return new QuerySchema()
+            {
+                Entity = message.Entity,
+                Fields = message.Fields,
+                PrimaryKey = message.PrimaryKey
+            };
+        }
         #endregion
     }
 }

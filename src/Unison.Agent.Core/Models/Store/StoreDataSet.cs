@@ -13,6 +13,9 @@ namespace Unison.Agent.Core.Models.Store
     /// </summary>
     public class StoreDataSet
     {
+        private long _version;
+        private readonly object _versionLock;
+
         public StoreDataSet(string entity, string primaryKey)
         {
             Entity = entity;
