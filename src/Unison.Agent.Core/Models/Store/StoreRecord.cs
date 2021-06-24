@@ -35,5 +35,13 @@ namespace Unison.Agent.Core.Models.Store
         {
             return Fields.GetValueOrDefault(fieldName);
         }
+
+        public bool IsEmpty()
+        {
+            if (Fields == null)
+                return true;
+
+            return !Fields.Any();
+        }
     }
 }

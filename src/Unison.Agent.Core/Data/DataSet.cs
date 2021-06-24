@@ -33,5 +33,13 @@ namespace Unison.Agent.Core.Data
         {
             return Records[primaryKey];
         }
+
+        public bool IsEmpty()
+        {
+            if (Records == null)
+                return true;
+
+            return !Records.Any((KeyValuePair<string, Record> record) => record.Value != null && !record.Value.IsEmpty());
+        }
     }
 }

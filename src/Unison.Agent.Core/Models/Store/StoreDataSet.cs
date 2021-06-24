@@ -31,5 +31,13 @@ namespace Unison.Agent.Core.Models.Store
         {
             return Records.GetValueOrDefault(primaryKey);
         }
+
+        public bool IsEmpty()
+        {
+            if (Records == null)
+                return true;
+
+            return Records.Any((KeyValuePair<string, StoreRecord> record) => record.Value != null && !record.Value.IsEmpty());
+        }
     }
 }

@@ -21,14 +21,16 @@ namespace Unison.Agent.Core.Workers
     {
         private readonly DataStore _dataStore;
         private readonly IAgentConfiguration _agentConfig;
+        private readonly IAmqpConfiguration _amqpConfig;
         private readonly IAmqpPublisher _publisher;
         private readonly ISQLRepository _repository;
         private readonly ILogger<SyncWorker> _logger;
 
-        public SyncWorker(DataStore dataStore, IAgentConfiguration agentConfig, IAmqpPublisher publisher, ISQLRepository repository, ILogger<SyncWorker> logger)
+        public SyncWorker(DataStore dataStore, IAgentConfiguration agentConfig, IAmqpConfiguration amqpConfig, IAmqpPublisher publisher, ISQLRepository repository, ILogger<SyncWorker> logger)
         {
             _dataStore = dataStore;
             _agentConfig = agentConfig;
+            _amqpConfig = amqpConfig;
             _publisher = publisher;
             _repository = repository;
             _logger = logger;
@@ -36,8 +38,6 @@ namespace Unison.Agent.Core.Workers
 
         public void ProcessMessage(AmqpSyncRequest message)
         {
-            Console.WriteLine("This has reached the SyncWorker");
-
             // Do not start synchronization if we haven't received the cached entities yet
             if (!_dataStore.Initialized)
                 return;
@@ -45,62 +45,73 @@ namespace Unison.Agent.Core.Workers
             ValidateMessage(message);
             QuerySchema schema = message.ToQuerySchema();
 
-            StartSync(schema);
+            AmqpSyncState syncState = Synchronize(schema);
 
-            // TODO: Remove this unnecessary read after debugging
-            var result = _repository.Read(schema);
-
-            var r = result.Records?.FirstOrDefault().Value;
-            _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
-
-            var response = new AmqpSyncResponse()
-            {
-                Agent = new AmqpAgent() { AgentId = _agentConfig.Id },
-                State = new AmqpSyncState() { Added = result.ToAmqpDataSetModel() }
-            };
-            _publisher.PublishMessage(response, "unison.responses");
+            PublishSyncState(syncState);
         }
 
-        private AmqpSyncState StartSync(QuerySchema schema)
+        private AmqpSyncState Synchronize(QuerySchema schema)
         {
-            var syncState = new AmqpSyncState();
-            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            AmqpSyncState syncState = schema.ToAmqpSyncState();
 
             DataSet cloudEntity = _dataStore.GetEntitySnapshot(schema.Entity);
-            DataSet dbEntity = _repository.Read(schema);
+            DataSet localEntity = _repository.Read(schema);
 
-            if (cloudEntity == null || !cloudEntity.Records.Any())
+            // TODO: Log out the count fo the retrieved entities
+
+            if (cloudEntity == null || cloudEntity.IsEmpty())
             {
-                syncState.Added = dbEntity.ToAmqpDataSetModel();
+                syncState.Added = localEntity.ToAmqpDataSetModel();
                 return syncState;
             }
 
-            foreach (KeyValuePair<string, Record> record in dbEntity.Records)
+            // Filter out any empty records that could have been incorrectly stored due to errors in data
+            cloudEntity.Records = cloudEntity.Records.Where(r => r.Value != null && !r.Value.IsEmpty()).ToDictionary(r => r.Key, r => r.Value);
+            localEntity.Records = localEntity.Records.Where(r => r.Value != null && !r.Value.IsEmpty()).ToDictionary(r => r.Key, r => r.Value);
+
+            foreach (KeyValuePair<string, Record> localRecord in localEntity.Records)
             {
                 // Add the new database record in case it doesn't exist in the cloud cache
-                if (!cloudEntity.Records.ContainsKey(record.Key) && record.Value != null)
+                if (!cloudEntity.Records.ContainsKey(localRecord.Key))
                 {
-                    syncState.Added.Records.Add(record.Key, record.Value.ToAmqpRecordModel());
+                    syncState.Added.Records.Add(localRecord.Key, localRecord.Value.ToAmqpRecordModel());
                 }
                 // Check for updated fields in case the records have the same primary keys
-                else if (cloudEntity.Records.ContainsKey(record.Key))
+                else if (cloudEntity.Records.ContainsKey(localRecord.Key))
                 {
-                    if (!cloudEntity.GetRecord(record.Key).Equals(dbEntity.GetRecord(record.Key)))
+                    if (!cloudEntity.GetRecord(localRecord.Key).Equals(localEntity.GetRecord(localRecord.Key)))
                     {
-                        syncState.Updated.Records.Add(record.Key, record.Value.ToAmqpRecordModel());
+                        syncState.Updated.Records.Add(localRecord.Key, localRecord.Value.ToAmqpRecordModel());
                     }
                 }
-
-                // Since remove is an O(1) operation it's useful to optimize the search for deleted records
-                cloudEntity.Records.Remove(record.Key);
             }
 
-            // The remaining records existed in the cloud but they have been deleted from the local database
-            syncState.Deleted = cloudEntity.ToAmqpDataSetModel();
+            foreach (KeyValuePair<string, Record> cloudRecord in cloudEntity.Records)
+            {
+                // Find the records that existed in the cloud but have been meanwhile deleted from the local database
+                if (!localEntity.Records.ContainsKey(cloudRecord.Key))
+                {
+                    syncState.Deleted.Records.Add(cloudRecord.Key, cloudRecord.Value.ToAmqpRecordModel());
+                }
+            }
 
             return syncState;
+        }
+
+        private AmqpSyncResponse CreateSyncResponse(AmqpSyncState syncState)
+        {
+            return new AmqpSyncResponse()
+            {
+                Agent = new AmqpAgent() { AgentId = _agentConfig.Id },
+                State = syncState
+            };
+        }
+
+        private void PublishSyncState(AmqpSyncState syncState)
+        {
+            AmqpSyncResponse response = CreateSyncResponse(syncState);
+            string exchange = _amqpConfig.Exchanges.Response;
+            _publisher.PublishMessage(response, exchange);
         }
 
         private void ValidateMessage(AmqpSyncRequest message)
@@ -113,6 +124,13 @@ namespace Unison.Agent.Core.Workers
 
             if (!message.Fields.Any())
                 throw new InvalidRequestException("At least one field name must be provided");
+        }
+
+        // Used only for debugging.
+        private void PrintFirstRecord(DataSet dataSet)
+        {
+            var r = dataSet.Records?.FirstOrDefault().Value;
+            _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
         }
     }
 }

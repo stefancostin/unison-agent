@@ -30,7 +30,7 @@ namespace Unison.Agent.Core.Data
             if (other == null)
                 return false;
 
-            foreach (KeyValuePair<string, Field> field in this.Fields)
+            foreach (KeyValuePair<string, Field> field in Fields)
             {
                 var fieldName = field.Key;
                 if (!field.Equals(other.Fields[fieldName]))
@@ -38,6 +38,14 @@ namespace Unison.Agent.Core.Data
             }
 
             return true;
+        }
+
+        public bool IsEmpty()
+        {
+            if (Fields == null)
+                return true;
+
+            return !Fields.Any();
         }
     }
 }

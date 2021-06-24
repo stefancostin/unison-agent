@@ -37,7 +37,7 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
             var command = new SqlCommand(sql, (SqlConnection)Connection);
             command.CommandType = CommandType.Text;
 
-            if (schema.Params.Any())
+            if (schema.Conditions.Any())
                 SanitizeAndAddParams(schema, command);
 
             return command;
@@ -49,7 +49,7 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
         {
             string selectStatement = GenerateSelectStatement(schema);
 
-            if (!schema.Params.Any())
+            if (!schema.Conditions.Any())
                 return selectStatement;
 
             string whereSatement = GenerateWhereStatement(schema);
@@ -67,9 +67,9 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
 
         private string GenerateWhereStatement(QuerySchema schema)
         {
-            var conditionsCount = schema.Params.Count();
-            var conditionFields = schema.Params.Select(p => p.Field).ToList();
-            var conditionParams = schema.Params.Select(p => CreateParameter(p.Field)).ToList();
+            var conditionsCount = schema.Conditions.Count();
+            var conditionFields = schema.Conditions.Select(p => p.Name).ToList();
+            var conditionParams = schema.Conditions.Select(p => CreateParameter(p.Name)).ToList();
 
             var conditions = new StringBuilder($"{Sql.Where} ");
             for (int i = 0; i < conditionsCount; i++)
@@ -85,9 +85,9 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
 
         private void SanitizeAndAddParams(QuerySchema schema, SqlCommand command)
         {
-            foreach (var param in schema.Params)
+            foreach (var param in schema.Conditions)
             {
-                command.Parameters.AddWithValue(CreateParameter(param.Field), param.Value);
+                command.Parameters.AddWithValue(CreateParameter(param.Name), param.Value);
             }
         }
 
@@ -97,9 +97,9 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
             var sanitizedSchema = new QuerySchema();
             sanitizedSchema.Entity = commandBuilder.QuoteIdentifier(schema.Entity);
             sanitizedSchema.Fields = schema.Fields.Select(field => commandBuilder.QuoteIdentifier(field));
-            sanitizedSchema.Params = schema.Params.Select(param => new QueryParam()
+            sanitizedSchema.Conditions = schema.Conditions.Select(param => new QueryParam()
             {
-                Field = commandBuilder.QuoteIdentifier(param.Field),
+                Name = commandBuilder.QuoteIdentifier(param.Name),
                 Value = param.Value,
             });
             return sanitizedSchema;

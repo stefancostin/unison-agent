@@ -61,6 +61,22 @@ namespace Unison.Agent.Core.Utilities
 
             return new AmqpField(name: storeField.Name, type: storeField.Type, value: storeField.Value);
         }
+
+        public static Field ToFieldModel(this QueryParam schemaField)
+        {
+            if (schemaField == null)
+                return null;
+
+            return new Field(name: schemaField.Name, type: schemaField.Type, value: schemaField.Value);
+        }
+
+        public static QueryParam ToQueryParamModel(this AmqpField amqpField)
+        {
+            if (amqpField == null)
+                return null;
+
+            return new QueryParam(name: amqpField.Name, type: amqpField.Type, value: amqpField.Value);
+        }
         #endregion
 
         #region Data.Records
@@ -121,6 +137,21 @@ namespace Unison.Agent.Core.Utilities
                 return record;
 
             record.Fields = storeRecord.Fields.ToDictionary(f => f.Key, f => f.Value?.ToFieldModel());
+
+            return record;
+        }
+
+        public static QueryRecord ToQueryRecordModel(this AmqpRecord amqpRecord)
+        {
+            if (amqpRecord == null)
+                return null;
+
+            QueryRecord record = new QueryRecord();
+
+            if (amqpRecord.Fields == null)
+                return record;
+
+            record.Fields = amqpRecord.Fields.Select(f => f.Value?.ToQueryParamModel());
 
             return record;
         }
@@ -187,6 +218,27 @@ namespace Unison.Agent.Core.Utilities
 
             return dataSet;
         }
+
+        public static QuerySchema ToQuerySchema(this AmqpDataSet amqpDataSet, QueryOperation operation)
+        {
+            if (amqpDataSet == null)
+                return null;
+
+            QuerySchema schema = new QuerySchema()
+            {
+                Entity = amqpDataSet.Entity,
+                PrimaryKey = amqpDataSet.PrimaryKey,
+                Operation = operation
+            };
+
+            if (amqpDataSet.Records == null || !amqpDataSet.Records.Any())
+                return schema;
+
+            schema.Fields = amqpDataSet.Records.First().Value.Fields.Select(f => f.Value.Name).ToList();
+            schema.Records = amqpDataSet.Records.Select(r => r.Value?.ToQueryRecordModel()).ToList();
+
+            return schema;
+        }
         #endregion
 
         #region Amqp.Messages
@@ -198,6 +250,15 @@ namespace Unison.Agent.Core.Utilities
                 Fields = message.Fields,
                 PrimaryKey = message.PrimaryKey
             };
+        }
+
+        public static AmqpSyncState ToAmqpSyncState(this QuerySchema schema)
+        {
+            AmqpSyncState syncState = new AmqpSyncState();
+            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            return syncState;
         }
         #endregion
     }
