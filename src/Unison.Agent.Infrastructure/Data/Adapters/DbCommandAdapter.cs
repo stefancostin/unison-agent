@@ -96,12 +96,15 @@ namespace Unison.Agent.Infrastructure.Data.Adapters
             var commandBuilder = new SqlCommandBuilder();
             var sanitizedSchema = new QuerySchema();
             sanitizedSchema.Entity = commandBuilder.QuoteIdentifier(schema.Entity);
-            sanitizedSchema.Fields = schema.Fields.Select(field => commandBuilder.QuoteIdentifier(field));
-            sanitizedSchema.Conditions = schema.Conditions.Select(param => new QueryParam()
-            {
-                Name = commandBuilder.QuoteIdentifier(param.Name),
-                Value = param.Value,
-            });
+            sanitizedSchema.PrimaryKey = commandBuilder.QuoteIdentifier(schema.PrimaryKey);
+            sanitizedSchema.Fields = schema.Fields.Select(field => commandBuilder.QuoteIdentifier(field)).ToList();
+            sanitizedSchema.Conditions = schema.Conditions
+                .Select(param => new QueryParam()
+                {
+                    Name = commandBuilder.QuoteIdentifier(param.Name),
+                    Value = param.Value,
+                })
+                .ToList();
             return sanitizedSchema;
         }
     }

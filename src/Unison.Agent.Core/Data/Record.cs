@@ -32,8 +32,8 @@ namespace Unison.Agent.Core.Data
 
             foreach (KeyValuePair<string, Field> field in Fields)
             {
-                var fieldName = field.Key;
-                if (!field.Equals(other.Fields[fieldName]))
+                string fieldName = field.Key;
+                if (!field.Value.Equals(other.Fields[fieldName]))
                     return false;
             }
 

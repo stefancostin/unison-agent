@@ -151,7 +151,7 @@ namespace Unison.Agent.Core.Utilities
             if (amqpRecord.Fields == null)
                 return record;
 
-            record.Fields = amqpRecord.Fields.Select(f => f.Value?.ToQueryParamModel());
+            record.Fields = amqpRecord.Fields.Select(f => f.Value?.ToQueryParamModel()).ToList();
 
             return record;
         }

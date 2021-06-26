@@ -28,6 +28,8 @@ namespace Unison.Agent.Core.Models
     {
         public QueryParam() { }
 
+        public QueryParam(QueryParam qp) : this(qp.Name, qp.Type, qp.Value) { }
+
         public QueryParam(string name, Type type, object value)
         {
             Name = name;
