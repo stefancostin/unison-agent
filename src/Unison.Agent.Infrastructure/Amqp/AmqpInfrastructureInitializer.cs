@@ -30,6 +30,7 @@ namespace Unison.Agent.Infrastructure.Amqp
         {
             using (var channel = _channelFactory.CreateUnmanagedChannel())
             {
+                BindApplyQueueToCommandsExchange(channel);
                 BindCacheQueueToCommandsExchange(channel);
                 BindReconnectQueueToCommandsExchange(channel);
                 BindSyncQueueToCommandsExchange(channel);
@@ -65,6 +66,37 @@ namespace Unison.Agent.Infrastructure.Amqp
                  arguments: null);
 
             _amqpConfig.Queues.CommandCache = queue;
+        }
+
+        private void BindApplyQueueToCommandsExchange(IModel channel)
+        {
+            var agentId = _agentConfig.Id;
+            var command = _amqpConfig.Commands.ApplyVersion;
+            var exchange = _amqpConfig.Exchanges.Commands;
+
+            var queue = $"{exchange}.{command}.{agentId}";
+
+            channel.QueueDeclare(queue: queue,
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
+
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+
+            channel.QueueBind(queue: queue,
+                              exchange: exchange,
+                              routingKey: agentSpecificRoutingKey,
+                              arguments: null);
+
+            var genericRoutingKey = $"{exchange}.{command}";
+
+            channel.QueueBind(queue: queue,
+                 exchange: exchange,
+                 routingKey: genericRoutingKey,
+                 arguments: null);
+
+            _amqpConfig.Queues.CommandApplyVersion = queue;
         }
 
         private void BindReconnectQueueToCommandsExchange(IModel channel)

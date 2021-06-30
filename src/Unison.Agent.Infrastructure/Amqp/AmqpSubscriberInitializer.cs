@@ -31,12 +31,14 @@ namespace Unison.Agent.Infrastructure.Amqp
                 var cacheSubscriber = InitializeCacheSubscriber(scope);
                 var reconnectSubscriber = InitializeReconnectSubscriber(scope);
                 var syncSubscriber = InitializeSyncSubscriber(scope);
+                var versioningSubscriber = InitializeVersioningSubscriber(scope);
 
                 var subscribers = new List<IAmqpSubscriber>();
 
                 subscribers.Add(cacheSubscriber);
                 subscribers.Add(reconnectSubscriber);
                 subscribers.Add(syncSubscriber);
+                subscribers.Add(versioningSubscriber);
 
                 return subscribers;
             }
@@ -61,6 +63,13 @@ namespace Unison.Agent.Infrastructure.Amqp
             var syncWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpSyncRequest>>();
             var queue = _amqpConfig.Queues.CommandSync;
             return _subscriberFactory.CreateSubscriber(queue, syncWorker);
+        }
+
+        private IAmqpSubscriber InitializeVersioningSubscriber(IServiceScope scope)
+        {
+            var versioningWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpApplyVersion>>();
+            var queue = _amqpConfig.Queues.CommandApplyVersion;
+            return _subscriberFactory.CreateSubscriber(queue, versioningWorker);
         }
     }
 }

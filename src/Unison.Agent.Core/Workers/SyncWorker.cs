@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,23 +46,31 @@ namespace Unison.Agent.Core.Workers
             ValidateMessage(message);
             QuerySchema schema = message.ToQuerySchema();
 
-            AmqpSyncState syncState = Synchronize(schema);
+            SyncState syncState = Synchronize(schema);
+
+            if (syncState.IsEmpty())
+                return;
+
+            _dataStore.TrackChanges(syncState);
 
             PublishSyncState(syncState);
         }
 
-        private AmqpSyncState Synchronize(QuerySchema schema)
+        private SyncState Synchronize(QuerySchema schema)
         {
-            AmqpSyncState syncState = schema.ToAmqpSyncState();
+            StoreDataSet cachedEntitySnapshot = _dataStore.GetEntitySnapshot(schema.Entity);
 
-            DataSet cloudEntity = _dataStore.GetEntitySnapshot(schema.Entity);
+            SyncState syncState = schema.ToSyncState();
+            syncState.Version = cachedEntitySnapshot.Version;
+
+            DataSet cloudEntity = cachedEntitySnapshot.ToDataSetModel();
             DataSet localEntity = _repository.Read(schema);
 
             // TODO: Log out the count fo the retrieved entities
 
             if (cloudEntity == null || cloudEntity.IsEmpty())
             {
-                syncState.Added = localEntity.ToAmqpDataSetModel();
+                syncState.Added = localEntity;
                 return syncState;
             }
 
@@ -74,14 +83,14 @@ namespace Unison.Agent.Core.Workers
                 // Add the new database record in case it doesn't exist in the cloud cache
                 if (!cloudEntity.Records.ContainsKey(localRecord.Key))
                 {
-                    syncState.Added.Records.Add(localRecord.Key, localRecord.Value.ToAmqpRecordModel());
+                    syncState.Added.Records.Add(localRecord.Key, localRecord.Value);
                 }
                 // Check for updated fields in case the records have the same primary keys
                 else if (cloudEntity.Records.ContainsKey(localRecord.Key))
                 {
                     if (!cloudEntity.GetRecord(localRecord.Key).Equals(localEntity.GetRecord(localRecord.Key)))
                     {
-                        syncState.Updated.Records.Add(localRecord.Key, localRecord.Value.ToAmqpRecordModel());
+                        syncState.Updated.Records.Add(localRecord.Key, localRecord.Value);
                     }
                 }
             }
@@ -91,7 +100,7 @@ namespace Unison.Agent.Core.Workers
                 // Find the records that existed in the cloud but have been meanwhile deleted from the local database
                 if (!localEntity.Records.ContainsKey(cloudRecord.Key))
                 {
-                    syncState.Deleted.Records.Add(cloudRecord.Key, cloudRecord.Value.ToAmqpRecordModel());
+                    syncState.Deleted.Records.Add(cloudRecord.Key, cloudRecord.Value);
                 }
             }
 
@@ -107,9 +116,9 @@ namespace Unison.Agent.Core.Workers
             };
         }
 
-        private void PublishSyncState(AmqpSyncState syncState)
+        private void PublishSyncState(SyncState syncState)
         {
-            AmqpSyncResponse response = CreateSyncResponse(syncState);
+            AmqpSyncResponse response = CreateSyncResponse(syncState.ToAmqpSyncState());
             string exchange = _amqpConfig.Exchanges.Response;
             _publisher.PublishMessage(response, exchange);
         }

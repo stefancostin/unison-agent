@@ -13,7 +13,6 @@ namespace Unison.Agent.Core.Models.Store
     /// </summary>
     public class StoreDataSet
     {
-        private long _version;
         private readonly object _versionLock;
 
         public StoreDataSet(string entity, string primaryKey)
@@ -23,8 +22,14 @@ namespace Unison.Agent.Core.Models.Store
             Records = new ConcurrentDictionary<string, StoreRecord>();
         }
 
+        public StoreDataSet(string entity, string primaryKey, long version) : this(entity, primaryKey)
+        {
+            Version = version;
+        }
+
         public string Entity { get; set; }
         public string PrimaryKey { get; set; }
+        public long Version { get; set; }
         public ConcurrentDictionary<string, StoreRecord> Records { get; set; }
 
         public StoreRecord GetRecord(string primaryKey)

@@ -141,6 +141,22 @@ namespace Unison.Agent.Core.Utilities
             return record;
         }
 
+        public static StoreRecord ToStoreRecordModel(this Record record)
+        {
+            if (record == null)
+                return null;
+
+            StoreRecord storeRecord = new StoreRecord();
+
+            if (record.Fields == null)
+                return storeRecord;
+
+            var dictionary = record.Fields.ToDictionary(f => f.Key, f => f.Value?.ToStoreFieldModel());
+            storeRecord.Fields = new ConcurrentDictionary<string, StoreField>(dictionary);
+
+            return storeRecord;
+        }
+
         public static QueryRecord ToQueryRecordModel(this AmqpRecord amqpRecord)
         {
             if (amqpRecord == null)
@@ -163,7 +179,7 @@ namespace Unison.Agent.Core.Utilities
             if (dataSet == null)
                 return null;
 
-            AmqpDataSet amqpDataSet = new AmqpDataSet(entity: dataSet.Entity, primaryKey: dataSet.PrimaryKey);
+            AmqpDataSet amqpDataSet = new AmqpDataSet(entity: dataSet.Entity, primaryKey: dataSet.PrimaryKey, version: dataSet.Version);
 
             if (dataSet.Records == null)
                 return amqpDataSet;
@@ -178,7 +194,7 @@ namespace Unison.Agent.Core.Utilities
             if (amqpDataSet == null)
                 return null;
 
-            DataSet dataSet = new DataSet(entity: amqpDataSet.Entity, primaryKey: amqpDataSet.PrimaryKey);
+            DataSet dataSet = new DataSet(entity: amqpDataSet.Entity, primaryKey: amqpDataSet.PrimaryKey, version: amqpDataSet.Version);
 
             if (amqpDataSet.Records == null)
                 return dataSet;
@@ -193,7 +209,7 @@ namespace Unison.Agent.Core.Utilities
             if (amqpDataSet == null)
                 return null;
 
-            StoreDataSet storeDataSet = new StoreDataSet(entity: amqpDataSet.Entity, primaryKey: amqpDataSet.PrimaryKey);
+            StoreDataSet storeDataSet = new StoreDataSet(entity: amqpDataSet.Entity, primaryKey: amqpDataSet.PrimaryKey, version: amqpDataSet.Version);
 
             if (amqpDataSet.Records == null)
                 return storeDataSet;
@@ -209,7 +225,7 @@ namespace Unison.Agent.Core.Utilities
             if (storeDataSet == null)
                 return null;
 
-            DataSet dataSet = new DataSet(entity: storeDataSet.Entity, primaryKey: storeDataSet.PrimaryKey);
+            DataSet dataSet = new DataSet(entity: storeDataSet.Entity, primaryKey: storeDataSet.PrimaryKey, version: storeDataSet.Version);
 
             if (storeDataSet.Records == null)
                 return dataSet;
@@ -241,6 +257,48 @@ namespace Unison.Agent.Core.Utilities
         }
         #endregion
 
+        #region Sync.State
+        public static SyncState ToSyncState(this QuerySchema schema)
+        {
+            SyncState syncState = new SyncState();
+            syncState.Entity = schema.Entity;
+            syncState.Added = new DataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Updated = new DataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Deleted = new DataSet(schema.Entity, schema.PrimaryKey);
+            return syncState;
+        }
+
+        public static AmqpSyncState ToAmqpSyncState(this QuerySchema schema)
+        {
+            AmqpSyncState syncState = new AmqpSyncState();
+            syncState.Entity = schema.Entity;
+            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            return syncState;
+        }
+
+        public static AmqpSyncState ToAmqpSyncState(this SyncState syncState)
+        {
+            AmqpSyncState amqpSyncState = new AmqpSyncState();
+            amqpSyncState.Entity = syncState.Entity;
+            amqpSyncState.Added = syncState.Added.ToAmqpDataSetModel();
+            amqpSyncState.Updated = syncState.Updated.ToAmqpDataSetModel();
+            amqpSyncState.Deleted = syncState.Deleted.ToAmqpDataSetModel();
+            return amqpSyncState;
+        }
+
+        public static SyncState ToSyncState(this AmqpSyncState amqpSyncState)
+        {
+            SyncState syncState = new SyncState();
+            syncState.Entity = amqpSyncState.Entity;
+            syncState.Added = amqpSyncState.Added.ToDataSetModel();
+            syncState.Updated = amqpSyncState.Updated.ToDataSetModel();
+            syncState.Deleted = amqpSyncState.Deleted.ToDataSetModel();
+            return syncState;
+        }
+        #endregion
+
         #region Amqp.Messages
         public static QuerySchema ToQuerySchema(this AmqpSyncRequest message)
         {
@@ -250,15 +308,6 @@ namespace Unison.Agent.Core.Utilities
                 Fields = message.Fields,
                 PrimaryKey = message.PrimaryKey
             };
-        }
-
-        public static AmqpSyncState ToAmqpSyncState(this QuerySchema schema)
-        {
-            AmqpSyncState syncState = new AmqpSyncState();
-            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            return syncState;
         }
         #endregion
     }

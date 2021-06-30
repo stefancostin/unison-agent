@@ -16,33 +16,113 @@ namespace Unison.Agent.Core.Models.Store
     /// </summary>
     public class DataStore
     {
-        private readonly object _padlock;
+        private readonly object _entityLock;
 
         public DataStore()
         {
-            _padlock = new object();
+            _entityLock = new object();
             Entities = new ConcurrentDictionary<string, StoreDataSet>();
+            EntityChanges = new ConcurrentDictionary<string, StoreChanges>();
         }
 
         public bool Initialized { get; set; }
         public ConcurrentDictionary<string, StoreDataSet> Entities { get; set; }
+        public ConcurrentDictionary<string, StoreChanges> EntityChanges { get; set; }
 
         public void AddEntity(StoreDataSet storeDataSet)
         {
-            var entity = storeDataSet.Entity;
+            string entity = storeDataSet.Entity;
             Entities.AddOrUpdate(entity, storeDataSet, (entity, existingStoreDataSet) => storeDataSet);
         }
 
-        public StoreDataSet GetEntity(string entity)
+        public void ApplyChanges(string entity, long version)
         {
-            return Entities.GetValueOrDefault(entity);
+            lock (_entityLock)
+            {
+                StoreDataSet storeEntity = GetStoreEntity(entity);
+
+                if (storeEntity == null)
+                    return;
+
+                SyncState changes = GetStoreChanges(entity, version);
+
+                if (changes == null)
+                    return;
+
+                string primaryKey = null;
+                StoreRecord record = null;
+
+                foreach (KeyValuePair<string, Record> addedRecord in changes.Added.Records)
+                {
+                    primaryKey = addedRecord.Key;
+                    record = addedRecord.Value?.ToStoreRecordModel();
+                    storeEntity.Records.AddOrUpdate(primaryKey, record, (primaryKey, existingRecord) => record);
+                }
+
+                foreach (KeyValuePair<string, Record> updatedRecord in changes.Updated.Records)
+                {
+                    primaryKey = updatedRecord.Key;
+                    record = updatedRecord.Value?.ToStoreRecordModel();
+                    storeEntity.Records.AddOrUpdate(primaryKey, record, (primaryKey, existingRecord) => record);
+                }
+
+                foreach (KeyValuePair<string, Record> deletedRecord in changes.Deleted.Records)
+                {
+                    primaryKey = deletedRecord.Key;
+                    storeEntity.Records.Remove(primaryKey, out record);
+                }
+            }
         }
 
-        public DataSet GetEntitySnapshot(string entity)
+        public void TrackChanges(SyncState syncState)
         {
-            lock (_padlock)
+            string entity = syncState.Entity;
+            long version = syncState.Version;
+
+            lock (_entityLock)
             {
-                return Entities.GetValueOrDefault(entity)?.ToDataSetModel();
+                StoreChanges versionedEntityChanges = EntityChanges.GetOrAdd(entity, (entity) => new StoreChanges());
+                versionedEntityChanges.Versions.AddOrUpdate(version, syncState, (version, existingSyncState) => syncState);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a deep-clone snapshot of the cached entity in a thread-safe manner
+        /// </summary>
+        /// <param name="entity">The cached entity name</param>
+        /// <returns>A deep-clone snapshot of the cached entity</returns>
+        public StoreDataSet GetEntitySnapshot(string entity)
+        {
+            lock (_entityLock)
+            {
+                return Entities.GetValueOrDefault(entity).Clone();
+            }
+        }
+
+        private SyncState GetStoreChanges(string entity, long version)
+        {
+            lock (_entityLock)
+            {
+                StoreChanges versionedEntityChanges = null;
+                EntityChanges.TryGetValue(entity, out versionedEntityChanges);
+
+                if (versionedEntityChanges == null)
+                    return null;
+
+                SyncState entityChanges = null;
+                versionedEntityChanges.Versions.TryGetValue(version, out entityChanges);
+
+                return entityChanges;
+            }
+        }
+
+        private StoreDataSet GetStoreEntity(string entity)
+        {
+            lock (_entityLock)
+            {
+                StoreDataSet storeEntity = null;
+                Entities.TryGetValue(entity, out storeEntity);
+                return storeEntity;
             }
         }
     }

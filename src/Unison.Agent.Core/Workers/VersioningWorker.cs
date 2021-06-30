@@ -14,35 +14,27 @@ using Unison.Common.Amqp.DTO;
 
 namespace Unison.Agent.Core.Workers
 {
-    public class CacheWorker : ISubscriptionWorker<AmqpCache>
+    public class VersioningWorker : ISubscriptionWorker<AmqpApplyVersion>
     {
         private readonly DataStore _store;
         private readonly IAgentConfiguration _agentConfig;
         private readonly ILogger<CacheWorker> _logger;
 
-        public CacheWorker(DataStore store, IAgentConfiguration agentConfig, ILogger<CacheWorker> logger)
+        public VersioningWorker(DataStore store, IAgentConfiguration agentConfig, ILogger<CacheWorker> logger)
         {
             _store = store;
             _agentConfig = agentConfig;
             _logger = logger;
         }
 
-        public void ProcessMessage(AmqpCache message)
+        public void ProcessMessage(AmqpApplyVersion message)
         {
-            Console.WriteLine("This has reached the Cache Initializer Worker");
+            Console.WriteLine("This has reached the Cache Version Worker");
 
             if (message == null)
                 return;
 
-            var products = message.Entities.FirstOrDefault(e => e.Entity == "Products");
-
-            if (products == null)
-                return;
-
-            _store.AddEntity(products.ToStoreEntityModel());
-            _store.Initialized = true;
-
-            Console.WriteLine("Entities have been cached");
+            _store.ApplyChanges(message.Entity, message.Version);
         }
     }
 }

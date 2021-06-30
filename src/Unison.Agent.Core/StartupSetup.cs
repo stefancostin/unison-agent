@@ -32,6 +32,7 @@ namespace Unison.Agent.Infrastructure
 
             services.AddScoped<ITimedWorker, HeartbeatWorker>();
             services.AddScoped<ISubscriptionWorker<AmqpCache>, CacheWorker>();
+            services.AddScoped<ISubscriptionWorker<AmqpApplyVersion>, VersioningWorker>();
             services.AddScoped<ISubscriptionWorker<AmqpReconnect>, ReconnectWorker>();
             services.AddScoped<ISubscriptionWorker<AmqpSyncRequest>, SyncWorker>();
 
