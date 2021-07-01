@@ -270,18 +270,19 @@ namespace Unison.Agent.Core.Utilities
 
         public static AmqpSyncState ToAmqpSyncState(this QuerySchema schema)
         {
-            AmqpSyncState syncState = new AmqpSyncState();
-            syncState.Entity = schema.Entity;
-            syncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            syncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
-            return syncState;
+            AmqpSyncState amqpSyncState = new AmqpSyncState();
+            amqpSyncState.Entity = schema.Entity;
+            amqpSyncState.Added = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            amqpSyncState.Updated = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            amqpSyncState.Deleted = new AmqpDataSet(schema.Entity, schema.PrimaryKey);
+            return amqpSyncState;
         }
 
         public static AmqpSyncState ToAmqpSyncState(this SyncState syncState)
         {
             AmqpSyncState amqpSyncState = new AmqpSyncState();
             amqpSyncState.Entity = syncState.Entity;
+            amqpSyncState.Version = syncState.Version;
             amqpSyncState.Added = syncState.Added.ToAmqpDataSetModel();
             amqpSyncState.Updated = syncState.Updated.ToAmqpDataSetModel();
             amqpSyncState.Deleted = syncState.Deleted.ToAmqpDataSetModel();
@@ -292,6 +293,7 @@ namespace Unison.Agent.Core.Utilities
         {
             SyncState syncState = new SyncState();
             syncState.Entity = amqpSyncState.Entity;
+            syncState.Version = amqpSyncState.Version;
             syncState.Added = amqpSyncState.Added.ToDataSetModel();
             syncState.Updated = amqpSyncState.Updated.ToDataSetModel();
             syncState.Deleted = amqpSyncState.Deleted.ToDataSetModel();

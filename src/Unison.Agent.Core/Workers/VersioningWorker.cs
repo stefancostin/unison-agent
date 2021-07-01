@@ -34,6 +34,10 @@ namespace Unison.Agent.Core.Workers
             if (message == null)
                 return;
 
+            long cachedEntityVersion = _store.GetEntityCurrentVersion(message.Entity);
+            if (message.Version != cachedEntityVersion)
+                return;
+
             _store.ApplyChanges(message.Entity, message.Version);
         }
     }

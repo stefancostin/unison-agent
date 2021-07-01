@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,7 @@ namespace Unison.Agent.Core.Models.Store
     /// </summary>
     public class StoreDataSet
     {
-        private readonly object _versionLock;
-
+        [JsonConstructor]
         public StoreDataSet(string entity, string primaryKey)
         {
             Entity = entity;

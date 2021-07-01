@@ -71,18 +71,10 @@ namespace Unison.Agent.Core.Models.Store
                     primaryKey = deletedRecord.Key;
                     storeEntity.Records.Remove(primaryKey, out record);
                 }
-            }
-        }
 
-        public void TrackChanges(SyncState syncState)
-        {
-            string entity = syncState.Entity;
-            long version = syncState.Version;
+                storeEntity.Version++;
 
-            lock (_entityLock)
-            {
-                StoreChanges versionedEntityChanges = EntityChanges.GetOrAdd(entity, (entity) => new StoreChanges());
-                versionedEntityChanges.Versions.AddOrUpdate(version, syncState, (version, existingSyncState) => syncState);
+                RemoveStoreChanges(entity, version);
             }
         }
 
@@ -96,6 +88,14 @@ namespace Unison.Agent.Core.Models.Store
             lock (_entityLock)
             {
                 return Entities.GetValueOrDefault(entity).Clone();
+            }
+        }
+
+        public long GetEntityCurrentVersion(string entity)
+        {
+            lock (_entityLock)
+            {
+                return Entities.GetValueOrDefault(entity).Version;
             }
         }
 
@@ -123,6 +123,35 @@ namespace Unison.Agent.Core.Models.Store
                 StoreDataSet storeEntity = null;
                 Entities.TryGetValue(entity, out storeEntity);
                 return storeEntity;
+            }
+        }
+
+        private SyncState RemoveStoreChanges(string entity, long version)
+        {
+            lock (_entityLock)
+            {
+                StoreChanges versionedEntityChanges = null;
+                EntityChanges.TryGetValue(entity, out versionedEntityChanges);
+
+                if (versionedEntityChanges == null)
+                    return null;
+
+                SyncState removedEntityChanges = null;
+                versionedEntityChanges.Versions.Remove(version, out removedEntityChanges);
+
+                return removedEntityChanges;
+            }
+        }
+
+        public void TrackChanges(SyncState syncState)
+        {
+            string entity = syncState.Entity;
+            long version = syncState.Version;
+
+            lock (_entityLock)
+            {
+                StoreChanges versionedEntityChanges = EntityChanges.GetOrAdd(entity, (entity) => new StoreChanges());
+                versionedEntityChanges.Versions.AddOrUpdate(version, syncState, (version, existingSyncState) => syncState);
             }
         }
     }

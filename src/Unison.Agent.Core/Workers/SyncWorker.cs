@@ -48,8 +48,8 @@ namespace Unison.Agent.Core.Workers
 
             SyncState syncState = Synchronize(schema);
 
-            if (syncState.IsEmpty())
-                return;
+            //if (syncState.IsEmpty())
+            //    return;
 
             _dataStore.TrackChanges(syncState);
 
