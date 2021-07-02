@@ -39,17 +39,26 @@ namespace Unison.Agent.Core.Workers
 
         public void ProcessMessage(AmqpSyncRequest message)
         {
-            // Do not start synchronization if we haven't received the cached entities yet
+            // Don't start synchronization if the cached entities haven't been received yet 
             if (!_dataStore.Initialized)
                 return;
 
             ValidateMessage(message);
+
+            string correlationId = message.CorrelationId;
+            _logger.LogDebug($"CorrelationId: {correlationId}. Received cache request for {message.Entity}");
+
             QuerySchema schema = message.ToQuerySchema();
 
             SyncState syncState = Synchronize(schema);
 
-            //if (syncState.IsEmpty())
-            //    return;
+            if (syncState.IsEmpty())
+            {
+                _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}");
+                return;
+            }
+
+            LogSyncState(syncState, correlationId);
 
             _dataStore.TrackChanges(syncState);
 
@@ -111,9 +120,18 @@ namespace Unison.Agent.Core.Workers
         {
             return new AmqpSyncResponse()
             {
-                Agent = new AmqpAgent() { AgentId = _agentConfig.Id },
+                Agent = new AmqpAgent() { InstanceId = _agentConfig.InstanceId },
                 State = syncState
             };
+        }
+
+        private void LogSyncState(SyncState syncState, string correlationId)
+        {
+            _logger.LogInformation($"CorrelationId: {correlationId}. " +
+                $"{syncState.Added.Records.Count()} records added,  " +
+                $"{syncState.Updated.Records.Count()} records updated and " +
+                $"{syncState.Deleted.Records.Count()} records deleted " +
+                $"for {syncState.Entity}, on version {syncState.Version}");
         }
 
         private void PublishSyncState(SyncState syncState)

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unison.Agent.Core.Exceptions;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Agent.Core.Models.Store;
@@ -17,32 +18,40 @@ namespace Unison.Agent.Core.Workers
     public class CacheWorker : ISubscriptionWorker<AmqpCache>
     {
         private readonly DataStore _store;
-        private readonly IAgentConfiguration _agentConfig;
         private readonly ILogger<CacheWorker> _logger;
 
-        public CacheWorker(DataStore store, IAgentConfiguration agentConfig, ILogger<CacheWorker> logger)
+        public CacheWorker(DataStore store, ILogger<CacheWorker> logger)
         {
             _store = store;
-            _agentConfig = agentConfig;
             _logger = logger;
         }
 
         public void ProcessMessage(AmqpCache message)
         {
-            Console.WriteLine("This has reached the Cache Initializer Worker");
+            ValidateMessage(message);
 
-            if (message == null)
-                return;
+            string correlationId = message.CorrelationId;
 
-            var products = message.Entities.FirstOrDefault(e => e.Entity == "Products");
+            _logger.LogInformation($"CorrelationId: {correlationId}. Received {message.Entities.Count()} entities to cache.");
 
-            if (products == null)
-                return;
+            foreach (AmqpDataSet entityCache in message.Entities)
+            {
+                _store.AddEntity(entityCache.ToStoreEntityModel());
+            }
 
-            _store.AddEntity(products.ToStoreEntityModel());
             _store.Initialized = true;
 
-            Console.WriteLine("Entities have been cached");
+            string cachedEntityNames = string.Join(", ", message.Entities.Select(e => e.Entity));
+            _logger.LogInformation($"CorrelationId: {correlationId}. Entities {cachedEntityNames} have been cached.");
+        }
+
+        private void ValidateMessage(AmqpCache message)
+        {
+            if (message == null || message.Entities == null)
+                throw new InvalidRequestException("A connection/cache request cannot be empty");
+
+            if (message.Entities.Any(e => string.IsNullOrWhiteSpace(e.Entity) || e.Version < 0))
+                throw new InvalidRequestException("Valid entity names and versions must be provided");
         }
     }
 }

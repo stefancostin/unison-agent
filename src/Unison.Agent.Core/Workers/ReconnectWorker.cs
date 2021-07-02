@@ -32,7 +32,7 @@ namespace Unison.Agent.Core.Workers
             var exchange = _amqpConfig.Exchanges.Connections;
             var message = new AmqpConnected()
             {
-                Agent = new AmqpAgent() { AgentId = _agentConfig.Id }
+                Agent = new AmqpAgent() { InstanceId = _agentConfig.InstanceId }
             };
             _publisher.PublishMessage(message, exchange);
         }

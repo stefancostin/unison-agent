@@ -39,11 +39,11 @@ namespace Unison.Agent.Infrastructure.Amqp
 
         private void BindCacheQueueToCommandsExchange(IModel channel)
         {
-            var agentId = _agentConfig.Id;
+            var instanceId = _agentConfig.InstanceId;
             var command = _amqpConfig.Commands.Cache;
             var exchange = _amqpConfig.Exchanges.Commands;
 
-            var queue = $"{exchange}.{command}.{agentId}";
+            var queue = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueDeclare(queue: queue,
                                  durable: false,
@@ -51,7 +51,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                                  autoDelete: false,
                                  arguments: null);
 
-            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueBind(queue: queue,
                               exchange: exchange,
@@ -70,11 +70,11 @@ namespace Unison.Agent.Infrastructure.Amqp
 
         private void BindApplyQueueToCommandsExchange(IModel channel)
         {
-            var agentId = _agentConfig.Id;
+            var instanceId = _agentConfig.InstanceId;
             var command = _amqpConfig.Commands.ApplyVersion;
             var exchange = _amqpConfig.Exchanges.Commands;
 
-            var queue = $"{exchange}.{command}.{agentId}";
+            var queue = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueDeclare(queue: queue,
                                  durable: false,
@@ -82,7 +82,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                                  autoDelete: false,
                                  arguments: null);
 
-            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueBind(queue: queue,
                               exchange: exchange,
@@ -101,11 +101,11 @@ namespace Unison.Agent.Infrastructure.Amqp
 
         private void BindReconnectQueueToCommandsExchange(IModel channel)
         {
-            var agentId = _agentConfig.Id;
+            var instanceId = _agentConfig.InstanceId;
             var command = _amqpConfig.Commands.Reconnect;
             var exchange = _amqpConfig.Exchanges.Commands;
 
-            var queue = $"{exchange}.{command}.{agentId}";
+            var queue = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueDeclare(queue: queue,
                                  durable: false,
@@ -113,7 +113,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                                  autoDelete: false,
                                  arguments: null);
 
-            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueBind(queue: queue,
                               exchange: exchange,
@@ -132,11 +132,11 @@ namespace Unison.Agent.Infrastructure.Amqp
 
         private void BindSyncQueueToCommandsExchange(IModel channel)
         {
-            var agentId = _agentConfig.Id;
+            var instanceId = _agentConfig.InstanceId;
             var command = _amqpConfig.Commands.Sync;
             var exchange = _amqpConfig.Exchanges.Commands;
 
-            var queue = $"{exchange}.{command}.{agentId}";
+            var queue = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueDeclare(queue: queue,
                                  durable: true,
@@ -144,7 +144,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                                  autoDelete: false,
                                  arguments: null);
 
-            var agentSpecificRoutingKey = $"{exchange}.{command}.{agentId}";
+            var agentSpecificRoutingKey = $"{exchange}.{command}.{instanceId}";
 
             channel.QueueBind(queue: queue,
                               exchange: exchange,

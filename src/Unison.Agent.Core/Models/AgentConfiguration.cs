@@ -9,6 +9,6 @@ namespace Unison.Agent.Core.Models
 {
     public class AgentConfiguration : IAgentConfiguration
     {
-        public string Id { get; set; }
+        public string InstanceId { get; set; }
     }
 }

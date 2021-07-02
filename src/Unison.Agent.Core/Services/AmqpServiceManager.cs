@@ -71,7 +71,7 @@ namespace Unison.Agent.Core.Services
                 var exchange = _amqpConfig.Exchanges.Connections;
                 var message = new AmqpConnected()
                 {
-                    Agent = new AmqpAgent() { AgentId = _agentConfig.Id }
+                    Agent = new AmqpAgent() { InstanceId = _agentConfig.InstanceId }
                 };
                 publisher.PublishMessage(message, exchange);
             }
