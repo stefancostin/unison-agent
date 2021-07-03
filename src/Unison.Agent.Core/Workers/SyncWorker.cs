@@ -46,7 +46,7 @@ namespace Unison.Agent.Core.Workers
             ValidateMessage(message);
 
             string correlationId = message.CorrelationId;
-            _logger.LogDebug($"CorrelationId: {correlationId}. Received cache request for {message.Entity}");
+            _logger.LogDebug($"CorrelationId: {correlationId}. Received cache request for {message.Entity}.");
 
             QuerySchema schema = message.ToQuerySchema();
 
@@ -54,7 +54,7 @@ namespace Unison.Agent.Core.Workers
 
             if (syncState.IsEmpty())
             {
-                _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}");
+                _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}.");
                 return;
             }
 
@@ -131,7 +131,7 @@ namespace Unison.Agent.Core.Workers
                 $"{syncState.Added.Records.Count()} records added,  " +
                 $"{syncState.Updated.Records.Count()} records updated and " +
                 $"{syncState.Deleted.Records.Count()} records deleted " +
-                $"for {syncState.Entity}, on version {syncState.Version}");
+                $"for {syncState.Entity}, on version {syncState.Version}.");
         }
 
         private void PublishSyncState(SyncState syncState)
