@@ -62,7 +62,7 @@ namespace Unison.Agent.Core.Workers
 
             _dataStore.TrackChanges(syncState);
 
-            PublishSyncState(syncState);
+            PublishSyncState(syncState, correlationId);
         }
 
         private SyncState Synchronize(QuerySchema schema)
@@ -134,9 +134,10 @@ namespace Unison.Agent.Core.Workers
                 $"for {syncState.Entity}, on version {syncState.Version}.");
         }
 
-        private void PublishSyncState(SyncState syncState)
+        private void PublishSyncState(SyncState syncState, string correlationId)
         {
             AmqpSyncResponse response = CreateSyncResponse(syncState.ToAmqpSyncState());
+            response.CorrelationId = correlationId;
             string exchange = _amqpConfig.Exchanges.Response;
             _publisher.PublishMessage(response, exchange);
         }
