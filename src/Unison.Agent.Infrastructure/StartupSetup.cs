@@ -20,9 +20,6 @@ namespace Unison.Agent.Infrastructure
             services.AddSingleton<IDbContext, DbContext>();
             services.AddScoped<ISQLRepository, SQLRepository>();
 
-            //services.AddSingleton<DbContext>();
-            //services.AddSingleton<ISQLRepository, SQLRepository>();
-
             //services.AddDbContext<AppDbContext>();
             //services.AddScoped<IProductRepository, ProductRepository>();
         }

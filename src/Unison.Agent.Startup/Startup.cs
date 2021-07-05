@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unison.Agent.Core.Utilities;
 using Unison.Agent.Infrastructure;
 
 namespace Unison.Agent.Startup
@@ -29,6 +30,7 @@ namespace Unison.Agent.Startup
             services.AddDbContext();
             services.AddAmqpContext();
             services.AddCoreServices();
+            services.AddCustomLogging();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

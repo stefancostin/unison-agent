@@ -29,6 +29,7 @@ namespace Unison.Agent.Infrastructure.Amqp
             using (var scope = _services.CreateScope())
             {
                 var cacheSubscriber = InitializeCacheSubscriber(scope);
+                var configureSubscriber = InitializeConfigurationSubscriber(scope);
                 var reconnectSubscriber = InitializeReconnectSubscriber(scope);
                 var syncSubscriber = InitializeSyncSubscriber(scope);
                 var versioningSubscriber = InitializeVersioningSubscriber(scope);
@@ -36,6 +37,7 @@ namespace Unison.Agent.Infrastructure.Amqp
                 var subscribers = new List<IAmqpSubscriber>();
 
                 subscribers.Add(cacheSubscriber);
+                subscribers.Add(configureSubscriber);
                 subscribers.Add(reconnectSubscriber);
                 subscribers.Add(syncSubscriber);
                 subscribers.Add(versioningSubscriber);
@@ -49,6 +51,13 @@ namespace Unison.Agent.Infrastructure.Amqp
             var cacheWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpCache>>();
             var queue = _amqpConfig.Queues.CommandCache;
             return _subscriberFactory.CreateSubscriber(queue, cacheWorker);
+        }
+
+        private IAmqpSubscriber InitializeConfigurationSubscriber(IServiceScope scope)
+        {
+            var configurationWorker = scope.ServiceProvider.GetRequiredService<ISubscriptionWorker<AmqpAgentConfiguration>>();
+            var queue = _amqpConfig.Queues.CommandConfigure;
+            return _subscriberFactory.CreateSubscriber(queue, configurationWorker);
         }
 
         private IAmqpSubscriber InitializeReconnectSubscriber(IServiceScope scope)

@@ -7,35 +7,49 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces;
+using Unison.Agent.Core.Interfaces.Configuration;
+using Unison.Agent.Core.Interfaces.Workers;
 using Unison.Agent.Core.Models;
 
 namespace Unison.Agent.Core.Services
 {
     public class TimedServiceManager : BackgroundService
     {
+        private readonly TimeSpan _initTimeout;
+        private readonly IAgentConfiguration _agentConfig;
+        private readonly IServiceProvider _services;
         private readonly ILogger<TimedServiceManager> _logger;
-        private Timer _timer;
+        private readonly ServiceTimers _timers;
 
-        public TimedServiceManager(IServiceProvider services, ILogger<TimedServiceManager> logger)
+        public TimedServiceManager(IAgentConfiguration agentConfig, IServiceProvider services, ServiceTimers timers, ILogger<TimedServiceManager> logger)
         {
-            Services = services;
+            _initTimeout = TimeSpan.FromSeconds(5);
+            _agentConfig = agentConfig;
             _logger = logger;
+            _services = services;
+            _timers = timers;
         }
-
-        public IServiceProvider Services { get; }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //using (var scope = Services.CreateScope())
-            //{
-            //    var heartbeatWorker = scope.ServiceProvider.GetRequiredService<ITimedWorker>();
-            //    _timer = new Timer(heartbeatWorker.Start, null, TimeSpan.Zero, TimeSpan.FromSeconds(60));
-            //}
-
+            _timers.InitializationTimer = new Timer(ExecuteServices, null, _initTimeout, Timeout.InfiniteTimeSpan);
             return Task.CompletedTask;
         }
 
-        protected void ExecuteService(object state) { _logger.LogInformation("Task executed by scheduler: " + Thread.GetCurrentProcessorId() + ", " + Thread.CurrentThread.Name); }
+        protected void ExecuteServices(object state) {
+            _logger.LogInformation("Starting timeed services...");
+
+            using (var scope = _services.CreateScope())
+            {
+                var heartbeatWorker = scope.ServiceProvider.GetRequiredService<ITimedWorker>();
+                var heartbeatTimer = _agentConfig.HeartbeatTimer > 0 ? _agentConfig.HeartbeatTimer : (int)TimeSpan.FromSeconds(10).TotalSeconds;
+                _timers.HeartbeatTimer = new Timer(heartbeatWorker.Start, _agentConfig.InstanceId, TimeSpan.Zero, TimeSpan.FromSeconds(heartbeatTimer));
+            }
+        }
+
+        ~TimedServiceManager()
+        {
+            _timers?.Dispose();
+        }
     }
 }

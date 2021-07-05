@@ -4,30 +4,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Unison.Agent.Core.Interfaces.Data;
+using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
+using Unison.Common.Amqp.DTO;
 using Unison.Common.Amqp.Interfaces;
 
 namespace Unison.Agent.Core.Workers
 {
     public class HeartbeatWorker : ITimedWorker
     {
+        private readonly IAmqpConfiguration _amqpConfig;
         private readonly IAmqpPublisher _publisher;
-        private readonly ISQLRepository _repository;
         private readonly ILogger<HeartbeatWorker> _logger;
 
-        public HeartbeatWorker(IAmqpPublisher publisher, ISQLRepository repository, ILogger<HeartbeatWorker> logger)
+        public HeartbeatWorker(IAmqpConfiguration amqpConfig, IAmqpPublisher publisher, ILogger<HeartbeatWorker> logger)
         {
+            _amqpConfig = amqpConfig;
             _publisher = publisher;
-            _repository = repository;
             _logger = logger;
         }
 
         public void Start(object state)
         {
-            _logger.LogInformation("Hello from Job");
+            var correlationId = Guid.NewGuid().ToString();
+            _logger.LogDebug($"CorrelationId: {correlationId}. Sending heartbeat to cloud server.");
 
-            //_repository.Read("SELECT * FROM Products");
+            var heartbeat = new AmqpHeartbeat()
+            {
+                Agent = new AmqpAgent() { InstanceId = state?.ToString() },
+                CorrelationId = correlationId
+            };
+
+            _publisher.PublishMessage(heartbeat, _amqpConfig.Exchanges.Heartbeat);
         }
     }
 }

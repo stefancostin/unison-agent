@@ -10,5 +10,6 @@ namespace Unison.Agent.Core.Models
     public class AgentConfiguration : IAgentConfiguration
     {
         public string InstanceId { get; set; }
+        public int HeartbeatTimer { get; set; }
     }
 }
