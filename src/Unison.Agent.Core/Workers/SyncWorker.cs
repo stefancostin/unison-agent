@@ -46,27 +46,35 @@ namespace Unison.Agent.Core.Workers
             ValidateMessage(message);
 
             string correlationId = message.CorrelationId;
-            _logger.LogDebug($"CorrelationId: {correlationId}. Received cache request for {message.Entity}.");
+            _logger.LogDebug($"CorrelationId: {correlationId}. Received sync request for {message.Entity}.");
 
-            QuerySchema schema = message.ToQuerySchema();
+            try
+            {
+                QuerySchema schema = message.ToQuerySchema();
 
-            SyncState syncState = Synchronize(schema);
+                SyncState syncState = Synchronize(schema);
 
-            //if (syncState.IsEmpty())
-            //{
-            //    _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}.");
-            //    return;
-            //}
+                //if (syncState.IsEmpty())
+                //{
+                //    _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}.");
+                //    return;
+                //}
 
-            LogSyncState(syncState, correlationId);
+                LogSyncState(syncState, correlationId);
 
-            _dataStore.TrackChanges(syncState);
+                _dataStore.TrackChanges(syncState);
 
-            PublishSyncState(syncState, correlationId);
+                PublishSyncState(syncState, correlationId);
+            }
+            catch (Exception ex)
+            {
+                PublishSyncError(ex, correlationId);
+            }
         }
 
         private SyncState Synchronize(QuerySchema schema)
         {
+
             StoreDataSet cachedEntitySnapshot = _dataStore.GetEntitySnapshot(schema.Entity);
 
             SyncState syncState = schema.ToSyncState();
@@ -74,8 +82,6 @@ namespace Unison.Agent.Core.Workers
 
             DataSet cloudEntity = cachedEntitySnapshot.ToDataSetModel();
             DataSet localEntity = _repository.Read(schema);
-
-            // TODO: Log out the count fo the retrieved entities
 
             if (cloudEntity == null || cloudEntity.IsEmpty())
             {
@@ -134,12 +140,30 @@ namespace Unison.Agent.Core.Workers
                 $"for {syncState.Entity}, on version {syncState.Version}.");
         }
 
+        private void PublishSyncError(Exception ex, string correlationId)
+        {
+            _logger.LogError($"CorrelationId: {correlationId}. Exception: {ex.Message}");
+            AmqpSyncError error = new AmqpSyncError()
+            {
+                CorrelationId = correlationId,
+                ErrorMessage = ex.Message
+            };
+            string exchange = _amqpConfig.Exchanges.Errors;
+            _publisher.PublishMessage(error, exchange);
+        }
+
         private void PublishSyncState(SyncState syncState, string correlationId)
         {
             AmqpSyncResponse response = CreateSyncResponse(syncState.ToAmqpSyncState());
             response.CorrelationId = correlationId;
             string exchange = _amqpConfig.Exchanges.Response;
             _publisher.PublishMessage(response, exchange);
+        }
+
+        private void PrintFirstRecord(DataSet dataSet)
+        {
+            var r = dataSet.Records?.FirstOrDefault().Value;
+            _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
         }
 
         private void ValidateMessage(AmqpSyncRequest message)
@@ -152,13 +176,6 @@ namespace Unison.Agent.Core.Workers
 
             if (!message.Fields.Any())
                 throw new InvalidRequestException("At least one field name must be provided");
-        }
-
-        // Used only for debugging.
-        private void PrintFirstRecord(DataSet dataSet)
-        {
-            var r = dataSet.Records?.FirstOrDefault().Value;
-            _logger.LogInformation($"{r.Fields["Id"]?.Value}, {r.Fields["Name"]?.Value}, {r.Fields["Price"]?.Value}");
         }
     }
 }
