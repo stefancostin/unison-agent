@@ -54,12 +54,6 @@ namespace Unison.Agent.Core.Workers
 
                 SyncState syncState = Synchronize(schema);
 
-                //if (syncState.IsEmpty())
-                //{
-                //    _logger.LogDebug($"CorrelationId: {correlationId}. No changes found for {message.Entity}.");
-                //    return;
-                //}
-
                 LogSyncState(syncState, correlationId);
 
                 _dataStore.TrackChanges(syncState);

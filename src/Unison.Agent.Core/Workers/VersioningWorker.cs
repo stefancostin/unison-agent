@@ -17,13 +17,11 @@ namespace Unison.Agent.Core.Workers
     public class VersioningWorker : ISubscriptionWorker<AmqpApplyVersion>
     {
         private readonly DataStore _store;
-        private readonly IAgentConfiguration _agentConfig;
         private readonly ILogger<CacheWorker> _logger;
 
-        public VersioningWorker(DataStore store, IAgentConfiguration agentConfig, ILogger<CacheWorker> logger)
+        public VersioningWorker(DataStore store, ILogger<CacheWorker> logger)
         {
             _store = store;
-            _agentConfig = agentConfig;
             _logger = logger;
         }
 
