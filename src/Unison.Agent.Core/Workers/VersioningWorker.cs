@@ -27,12 +27,13 @@ namespace Unison.Agent.Core.Workers
 
         public void ProcessMessage(AmqpApplyVersion message)
         {
-            Console.WriteLine("This has reached the Cache Version Worker");
-
             if (message == null)
                 return;
 
+            _logger.LogInformation($"CorrelationId: {message.CorrelationId}. Applying version {message.Version} changes to cache.");
+
             long cachedEntityVersion = _store.GetEntityCurrentVersion(message.Entity);
+
             if (message.Version != cachedEntityVersion)
                 return;
 

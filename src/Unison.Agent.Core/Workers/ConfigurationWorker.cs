@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Unison.Agent.Core.Exceptions;
 using Unison.Agent.Core.Interfaces.Configuration;
 using Unison.Agent.Core.Interfaces.Workers;
-using Unison.Agent.Core.Models;
 using Unison.Common.Amqp.DTO;
 
 namespace Unison.Agent.Core.Workers
@@ -26,7 +25,7 @@ namespace Unison.Agent.Core.Workers
         public void ProcessMessage(AmqpAgentConfiguration message)
         {
             ValidateMessage(message);
-            _logger.LogInformation($"CorrelationId: {message.CorrelationId}. Received new configuration." +
+            _logger.LogInformation($"CorrelationId: {message.CorrelationId}. Received new configuration. " +
                 $"Heartbeat now set at {message.HeartbeatTimer} seconds.");
             _agentConfiguration.HeartbeatTimer = message.HeartbeatTimer;
         }

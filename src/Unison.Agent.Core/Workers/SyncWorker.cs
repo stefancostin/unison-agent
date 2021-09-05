@@ -128,7 +128,7 @@ namespace Unison.Agent.Core.Workers
         private void LogSyncState(SyncState syncState, string correlationId)
         {
             _logger.LogInformation($"CorrelationId: {correlationId}. " +
-                $"{syncState.Added.Records.Count()} records added,  " +
+                $"{syncState.Added.Records.Count()} records added, " +
                 $"{syncState.Updated.Records.Count()} records updated and " +
                 $"{syncState.Deleted.Records.Count()} records deleted " +
                 $"for {syncState.Entity}, on version {syncState.Version}.");

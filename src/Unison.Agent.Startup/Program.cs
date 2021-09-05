@@ -1,11 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Unison.Agent.Core.Utilities;
+using Unison.Agent.Infrastructure;
 
 namespace Unison.Agent.Startup
 {
@@ -18,9 +14,13 @@ namespace Unison.Agent.Startup
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
+                .ConfigureServices((hostContext, services) =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    services.AddConfigurations(hostContext.Configuration);
+                    services.AddDbContext();
+                    services.AddAmqpContext();
+                    services.AddCoreServices();
+                    services.AddCustomLogging();
                 });
     }
 }
